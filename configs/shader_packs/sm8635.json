@@ -1,0 +1,27 @@
+{
+  "platform": "sm8635",
+  "driver_min_version": "512.450.0",
+  "shader_packs": {
+    "chunk_solid": {
+      "vert": "shaders/chunk.vert.spv",
+      "frag": "shaders/chunk.frag.spv",
+      "pipeline": "SOLID",
+      "dynamic_states": ["viewport", "scissor", "depth_bias"]
+    },
+    "chunk_cutout": {
+      "vert": "shaders/chunk.vert.spv",
+      "frag": "shaders/chunk_cutout.frag.spv",
+      "pipeline": "CUTOUT"
+    },
+    "chunk_transparent": {
+      "vert": "shaders/chunk.vert.spv",
+      "frag": "shaders/chunk_transparent.frag.spv",
+      "pipeline": "TRANSPARENT"
+    }
+  },
+  "render_skeleton": {
+    "staging_buffer_size_mb": 16,
+    "ssbo_size_mb": 64,
+    "ring_buffer_frames": 3
+  }
+}

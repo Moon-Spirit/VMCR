@@ -1,0 +1,34 @@
+{
+  "name": "VMCR",
+  "version": "0.1.0",
+  "renderer": "GL",
+  "library": "libGL.so",
+  "library_path": "./",
+  "description": "Vulkan Mixed Compatibility Renderer for FCL",
+  "author": "anomalyco",
+  "homepage": "https://github.com/Moon-Spirit/VMCR",
+  "min_mc_version": "1.20.4",
+  "max_mc_version": "1.20.6",
+  "icon": "icon.png",
+
+  "env": {
+    "VMCR_FORCE_TIER": "auto",
+    "VMCR_LOG_LEVEL": "2"
+  },
+
+  "jvm_args": [
+    "-Dvmcr.fabricMod=VMCR-fabric-1.20.4.jar"
+  ],
+
+  "libraries": [
+    "libGL.so",
+    "libvmcr_vk.so",
+    "libvmcr_gles.so",
+    "libvmcr_jni.so"
+  ],
+
+  "assets": {
+    "shaders": "shaders/",
+    "configs":  "configs/"
+  }
+}
