@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 project(vmcr
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "Vulkan Mixed Compatibility Renderer for FCL"
     LANGUAGES C CXX
 )
@@ -23,17 +23,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(${CMAKE_SOURCE_DIR}/cmake/Options.cmake)
 
 # ===========================================================================
-# 2. Vulkan 头文�?/ Loader
+# 2. Vulkan 头文件 / Loader
 # ===========================================================================
 include(${CMAKE_SOURCE_DIR}/cmake/FindVulkan.cmake)
 
 # ===========================================================================
-# 3. 公共 include
+# 3. 第三方依赖 (submodules)
+# ===========================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/CMakeLists.txt")
+    add_subdirectory(third_party EXCLUDE_FROM_ALL)
+endif()
+
+# ===========================================================================
+# 4. 公共 include
 # ===========================================================================
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # ===========================================================================
-# 4. 子模�?# ===========================================================================
+# 5. 子模块
+# ===========================================================================
 if(VMCR_ENABLE_VULKAN OR VMCR_ENABLE_GLES)
     add_subdirectory(src/main/cpp/core)
 endif()
@@ -59,7 +67,7 @@ if(VMCR_ENABLE_JNI)
 endif()
 
 # ===========================================================================
-# 5. 单元测试 (主机�?
+# 6. 单元测试 (主机侧)
 # ===========================================================================
 if(VMCR_ENABLE_UNIT_TEST)
     enable_testing()
@@ -67,7 +75,7 @@ if(VMCR_ENABLE_UNIT_TEST)
 endif()
 
 # ===========================================================================
-# 6. 安装规则
+# 7. 安装规则
 # ===========================================================================
 if(VMCR_ENABLE_LOADER)
     include(CMakePackageConfigHelpers)

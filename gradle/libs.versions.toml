@@ -1,0 +1,9 @@
+# ===========================================================================
+# gradle/libs.versions.toml - Gradle 版本目录
+# FCL 插件构建使用 AGP 8.x
+# ===========================================================================
+[versions]
+agp = "8.5.0"
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

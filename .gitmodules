@@ -1,0 +1,32 @@
+[submodule "third_party/Vulkan-Hpp"]
+	path = third_party/Vulkan-Hpp
+	url = https://github.com/KhronosGroup/Vulkan-Hpp.git
+	branch = main
+[submodule "third_party/VMA"]
+	path = third_party/VMA
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+	branch = master
+[submodule "third_party/vkbootstrap"]
+	path = third_party/vkbootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap.git
+	branch = main
+[submodule "third_party/glslang"]
+	path = third_party/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+	branch = main
+[submodule "third_party/SPIRV-Cross"]
+	path = third_party/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
+	branch = main
+[submodule "third_party/glm"]
+	path = third_party/glm
+	url = https://github.com/g-truc/glm.git
+	branch = master
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog.git
+	branch = v1.x
+[submodule "third_party/dobby"]
+	path = third_party/dobby
+	url = https://github.com/jmpews/Dobby.git
+	branch = master

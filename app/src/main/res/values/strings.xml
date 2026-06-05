@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VMCR</string>
+    <string name="description">VMCR (Vulkan Mixed Compatibility Renderer) — Vulkan 1.3 主路径 + GLES 3.2 保底. 适合 GTNH 等老版本 MC.</string>
+</resources>

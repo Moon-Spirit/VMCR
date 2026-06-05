@@ -1,0 +1,29 @@
+refactor: 按 MobileGlues-plugin 架构添加 FCL 插件 APK 模块
+
+参考 MobileGL-Dev/MobileGlues-plugin/app 的集成方式, 新增:
+
+1. .gitmodules: 第三方依赖 (Vulkan-Hpp/VMA/vkbootstrap/glslang/SPIRV-Cross/GLM/spdlog/dobby)
+   git submodule update --init --recursive 拉取
+
+2. third_party/ 目录:
+   - README.md 说明各依赖用途
+   - CMakeLists.txt 统一管理, 子模块缺失时优雅降级
+
+3. app/ FCL 插件 APK 模块 (Kotlin + AGP 8.5):
+   - AndroidManifest.xml 含 FCL 识别的 meta-data:
+     * fclPlugin=true
+     * renderer="VMCR:libGL.so:libEGL.so"
+     * boatEnv / pojavEnv (FCL/Pojav 启动器环境变量)
+     * minMCVer="1.7.10" (覆盖 GT: New Horizons 主流老版本)
+   - VMCRPluginActivity.java 占位 (NoDisplay theme)
+   - res/values/strings.xml
+   - build.gradle.kts 集成主 CMakeLists, 打包 NDK 产物
+
+4. 根 settings.gradle.kts / gradle/libs.versions.toml
+5. CMakeLists.txt v0.1.0 -> v0.2.0, 加 third_party include
+6. next_steps.md: 后续重构计划
+
+注意: 1.7.10 是 Forge 时代 (非 Fabric), JNI Mixin 拦截不生效,
+但 GLES forwarding 路径可以透明拦截 OpenGL 调用并转发.
+技术风险: 1.7.10 用 LWJGL3 (Pojav/FCL 实现), 调用 libGL.so/libEGL.so
+走的是我们的 forwarder 路径, 应当可以工作.
