@@ -16,17 +16,16 @@ public:
     bool init(const vmcr::InitParams& params) noexcept override {
         params_ = params;
 
-        if (!vmcr::vendor::g_gl.loaded) {
+        if (!vmcr::vendor::gl().loaded) {
             LOG_E(kTag, "vendor GL not loaded");
             return false;
         }
 
         // 不接管 eglMakeCurrent, 仅记录当前 GL 版本
-        // mc 通过 GL_NUM_COMPRESSED_TEXTURE_FORMATS 等查询版本
         GLint major = 0, minor = 0;
-        if (vmcr::vendor::g_gl.glGetIntegerv) {
-            vmcr::vendor::g_gl.glGetIntegerv(0x3000 /* GL_MAJOR_VERSION */, &major);
-            vmcr::vendor::g_gl.glGetIntegerv(0x3001 /* GL_MINOR_VERSION */, &minor);
+        if (vmcr::vendor::gl().glGetIntegerv) {
+            vmcr::vendor::gl().glGetIntegerv(0x3000 /* GL_MAJOR_VERSION */, &major);
+            vmcr::vendor::gl().glGetIntegerv(0x3001 /* GL_MINOR_VERSION */, &minor);
         }
         LOG_I(kTag, "[GLES] init OK, vendor GLES %d.%d", major, minor);
         return true;
@@ -37,21 +36,20 @@ public:
     }
 
     void begin_frame() noexcept override {
-        // no-op: vendor driver already tracking state
+        // no-op
     }
 
     void submit(const vmcr::DrawCmd& cmd) noexcept override {
-        // Phase 1: 不实现, vendor driver 自行处理
         (void)cmd;
     }
 
     void end_frame() noexcept override {
-        // no-op: vendor driver 自行 swap
+        // no-op
     }
 
     void on_surface_changed(uint32_t w, uint32_t h) noexcept override {
-        if (vmcr::vendor::g_gl.glViewport) {
-            vmcr::vendor::g_gl.glViewport(0, 0, (GLint)w, (GLint)h);
+        if (vmcr::vendor::gl().glViewport) {
+            vmcr::vendor::gl().glViewport(0, 0, (GLint)w, (GLint)h);
         }
     }
 

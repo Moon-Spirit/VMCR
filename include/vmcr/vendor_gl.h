@@ -28,11 +28,12 @@ namespace vmcr::vendor {
 
 // ---------------------------------------------------------------------------
 // 函数指针表 (PFN_*)
+// 返回类型按 GLES 3.2 规范, 之前错误地把所有返回 void, 已修正
 // ---------------------------------------------------------------------------
 struct GlFunctionTable {
     bool loaded = false;
 
-    // ===== Core =====
+    // ===== Core (void 返回) =====
     void (*glActiveTexture)(GLenum) = nullptr;
     void (*glAttachShader)(GLuint, GLuint) = nullptr;
     void (*glBindAttribLocation)(GLuint, GLuint, const GLchar*) = nullptr;
@@ -48,7 +49,7 @@ struct GlFunctionTable {
     void (*glBlendFuncSeparate)(GLenum, GLenum, GLenum, GLenum) = nullptr;
     void (*glBufferData)(GLenum, GLsizeiptr, const GLvoid*, GLenum) = nullptr;
     void (*glBufferSubData)(GLenum, GLintptr, GLsizeiptr, const GLvoid*) = nullptr;
-    void (*glCheckFramebufferStatus)(GLenum) = nullptr;
+    GLenum (*glCheckFramebufferStatus)(GLenum) = nullptr;   // returns GLenum
     void (*glClear)(GLbitfield) = nullptr;
     void (*glClearColor)(GLfloat, GLfloat, GLfloat, GLfloat) = nullptr;
     void (*glClearDepthf)(GLfloat) = nullptr;
@@ -56,8 +57,8 @@ struct GlFunctionTable {
     void (*glColorMask)(GLboolean, GLboolean, GLboolean, GLboolean) = nullptr;
     void (*glCompileShader)(GLuint) = nullptr;
     void (*glCompressedTexImage2D)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*) = nullptr;
-    void (*glCreateProgram)(void) = nullptr;
-    void (*glCreateShader)(GLenum) = nullptr;
+    GLuint (*glCreateProgram)(void) = nullptr;                // returns GLuint
+    GLuint (*glCreateShader)(GLenum) = nullptr;               // returns GLuint
     void (*glCullFace)(GLenum) = nullptr;
     void (*glDeleteBuffers)(GLsizei, const GLuint*) = nullptr;
     void (*glDeleteFramebuffers)(GLsizei, const GLuint*) = nullptr;
@@ -90,8 +91,8 @@ struct GlFunctionTable {
     void (*glGetActiveAttrib)(GLuint, GLuint, GLsizei, GLsizei*, GLint*, GLenum*, GLchar*) = nullptr;
     void (*glGetActiveUniform)(GLuint, GLuint, GLsizei, GLsizei*, GLint*, GLenum*, GLchar*) = nullptr;
     void (*glGetAttachedShaders)(GLuint, GLsizei, GLsizei*, GLuint*) = nullptr;
-    void (*glGetAttribLocation)(GLuint, const GLchar*) = nullptr;
-    GLenum (*glGetError)(void) = nullptr;
+    GLint (*glGetAttribLocation)(GLuint, const GLchar*) = nullptr;  // returns GLint
+    GLenum (*glGetError)(void) = nullptr;                          // returns GLenum
     void (*glGetFloatv)(GLenum, GLfloat*) = nullptr;
     void (*glGetFramebufferAttachmentParameteriv)(GLenum, GLenum, GLenum, GLint*) = nullptr;
     void (*glGetIntegerv)(GLenum, GLint*) = nullptr;
@@ -102,23 +103,23 @@ struct GlFunctionTable {
     void (*glGetShaderiv)(GLuint, GLenum, GLint*) = nullptr;
     void (*glGetShaderPrecisionFormat)(GLenum, GLenum, GLint*, GLint*) = nullptr;
     void (*glGetShaderSource)(GLuint, GLsizei, GLsizei*, GLchar*) = nullptr;
-    const GLubyte* (*glGetString)(GLenum) = nullptr;
+    const GLubyte* (*glGetString)(GLenum) = nullptr;               // returns const GLubyte*
     void (*glGetTexParameterfv)(GLenum, GLenum, GLfloat*) = nullptr;
     void (*glGetTexParameteriv)(GLenum, GLenum, GLint*) = nullptr;
     void (*glGetUniformfv)(GLuint, GLint, GLfloat*) = nullptr;
     void (*glGetUniformiv)(GLuint, GLint, GLint*) = nullptr;
-    GLint (*glGetUniformLocation)(GLuint, const GLchar*) = nullptr;
+    GLint (*glGetUniformLocation)(GLuint, const GLchar*) = nullptr; // returns GLint
     void (*glGetVertexAttribfv)(GLuint, GLenum, GLfloat*) = nullptr;
     void (*glGetVertexAttribiv)(GLuint, GLenum, GLint*) = nullptr;
     void (*glHint)(GLenum, GLenum) = nullptr;
-    GLboolean (*glIsBuffer)(GLuint) = nullptr;
-    GLboolean (*glIsEnabled)(GLenum) = nullptr;
-    GLboolean (*glIsFramebuffer)(GLuint) = nullptr;
-    GLboolean (*glIsProgram)(GLuint) = nullptr;
-    GLboolean (*glIsRenderbuffer)(GLuint) = nullptr;
-    GLboolean (*glIsShader)(GLuint) = nullptr;
-    GLboolean (*glIsTexture)(GLuint) = nullptr;
-    GLboolean (*glIsVertexArray)(GLuint) = nullptr;
+    GLboolean (*glIsBuffer)(GLuint) = nullptr;                     // returns GLboolean
+    GLboolean (*glIsEnabled)(GLenum) = nullptr;                    // returns GLboolean
+    GLboolean (*glIsFramebuffer)(GLuint) = nullptr;               // returns GLboolean
+    GLboolean (*glIsProgram)(GLuint) = nullptr;                   // returns GLboolean
+    GLboolean (*glIsRenderbuffer)(GLuint) = nullptr;              // returns GLboolean
+    GLboolean (*glIsShader)(GLuint) = nullptr;                    // returns GLboolean
+    GLboolean (*glIsTexture)(GLuint) = nullptr;                   // returns GLboolean
+    GLboolean (*glIsVertexArray)(GLuint) = nullptr;               // returns GLboolean
     void (*glLineWidth)(GLfloat) = nullptr;
     void (*glLinkProgram)(GLuint) = nullptr;
     void (*glPixelStorei)(GLenum, GLint) = nullptr;

@@ -15,6 +15,17 @@ using EGLint     = int32_t;
 using EGLenum    = uint32_t;
 using __eglMustCastToProperFunctionPointerType = void(*)();
 
+// EGL 常量
+#ifndef EGL_TRUE
+#define EGL_TRUE  1
+#endif
+#ifndef EGL_FALSE
+#define EGL_FALSE 0
+#endif
+#ifndef EGL_NONE
+#define EGL_NONE  0
+#endif
+
 namespace vmcr::vendor {
 
 struct EglFunctionTable {
@@ -44,6 +55,10 @@ struct EglFunctionTable {
     const char* (*eglQueryString)(EGLDisplay, EGLenum) = nullptr;
     EGLint     (*eglWaitClient)(void) = nullptr;
     EGLBoolean (*eglWaitNative)(EGLint) = nullptr;
+    EGLBoolean (*eglReleaseThread)(void) = nullptr;
+    EGLBoolean (*eglWaitGL)(void) = nullptr;
+    EGLBoolean (*eglWaitClientNOK)(void) = nullptr;
+    void*     (*eglGetProcAddress_raw)(const char*) = nullptr;  // raw void*
 };
 
 EglFunctionTable& egl() noexcept;

@@ -102,7 +102,9 @@ VMCR_EXPORT EGLBoolean EGLAPIENTRY eglSwapInterval(EGLDisplay dpy, EGLint interv
 VMCR_EXPORT __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char* name) {
     auto& e = vmcr::vendor::egl();
-    return e.eglGetProcAddress ? e.eglGetProcAddress(name) : nullptr;
+    // vendor 返回 void*, EGL 规范要求函数指针. reinterpret_cast 转换
+    void* p = e.eglGetProcAddress ? e.eglGetProcAddress(name) : nullptr;
+    return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(p);
 }
 
 VMCR_EXPORT EGLBoolean EGLAPIENTRY eglChooseConfig(EGLDisplay dpy, const EGLint* attrib_list,

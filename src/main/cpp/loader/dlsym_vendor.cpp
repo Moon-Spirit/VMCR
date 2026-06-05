@@ -5,6 +5,7 @@
 #include "vmcr/log.h"
 #include "vmcr/vendor_gl.h"
 #include "vmcr/vendor_egl.h"
+#include "vmcr/export.h"
 
 #include <dlfcn.h>
 #include <cstring>
@@ -27,8 +28,10 @@ T sym(void* h, const char* name) {
 
 }  // namespace
 
-GlFunctionTable& gl() noexcept { return g_gl; }
-EglFunctionTable& egl() noexcept { return g_egl; }
+// 全局访问器 (放在匿名命名空间外, 可被外部调用)
+// 标记 VMCR_EXPORT 以便其他 .so (libEGL.so) 能 dlsym 到
+VMCR_EXPORT GlFunctionTable& gl() noexcept { return g_gl; }
+VMCR_EXPORT EglFunctionTable& egl() noexcept { return g_egl; }
 
 bool load_vendor() noexcept {
     if (g_loaded) return true;
