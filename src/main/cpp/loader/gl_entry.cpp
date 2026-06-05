@@ -22,8 +22,21 @@ static inline void vmcr_forward_log(const char* name) {
     LOG_V(log::kTagGL, "forward: %s", name);
 }
 
+namespace vmcr::loader {
+namespace {
+
+// 通用转发: 调用 vendor, 若无 vendor 符号则返回默认
+template <typename T, typename... Args>
+inline T forward_with_default(T (*fn)(Args...), T def, Args... args) {
+    if (fn) return fn(args...);
+    return def;
+}
+
+}  // namespace
+}  // namespace vmcr::loader
+
 // =====================================================================
-// 宏: FWD0..FWD9 (无返回值), FWD_RET0..FWD_RET2 (有返回值)
+// 通用入口宏 (无返回值)
 // =====================================================================
 #define FWD0(name) \
     extern "C" VMCR_EXPORT void name() { \
@@ -95,30 +108,85 @@ static inline void vmcr_forward_log(const char* name) {
         if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8, p9); \
     }
 
-// 有返回值的版本
-#define FWD_RET0(name, ret, ret_init) \
-    extern "C" VMCR_EXPORT ret name() { \
-        vmcr_forward_log(#name); \
-        auto& t = vmcr::vendor::gl(); \
-        if (t.name) return t.name(); \
-        return ret_init; \
-    }
+// =====================================================================
+// 有返回值的入口: 全部 inline, 不使用宏
+// (NDK clang 对宏的 token 解析有问题, inline 最可靠)
+// =====================================================================
 
-#define FWD_RET1(name, ret, T1, p1, ret_init) \
-    extern "C" VMCR_EXPORT ret name(T1 p1) { \
-        vmcr_forward_log(#name); \
-        auto& t = vmcr::vendor::gl(); \
-        if (t.name) return t.name(p1); \
-        return ret_init; \
-    }
+// ---------- 0 参数 ----------
+extern "C" VMCR_EXPORT GLuint glCreateProgram() {
+    vmcr_forward_log("glCreateProgram");
+    auto& t = vmcr::vendor::gl();
+    return t.glCreateProgram ? t.glCreateProgram() : 0u;
+}
 
-#define FWD_RET2(name, ret, T1, p1, T2, p2, ret_init) \
-    extern "C" VMCR_EXPORT ret name(T1 p1, T2 p2) { \
-        vmcr_forward_log(#name); \
-        auto& t = vmcr::vendor::gl(); \
-        if (t.name) return t.name(p1, p2); \
-        return ret_init; \
-    }
+extern "C" VMCR_EXPORT GLenum glGetError() {
+    auto& t = vmcr::vendor::gl();
+    return t.glGetError ? t.glGetError() : GLenum(0);
+}
+
+// ---------- 1 参数 ----------
+extern "C" VMCR_EXPORT GLuint glCreateShader(GLenum type) {
+    vmcr_forward_log("glCreateShader");
+    auto& t = vmcr::vendor::gl();
+    return t.glCreateShader ? t.glCreateShader(type) : 0u;
+}
+
+extern "C" VMCR_EXPORT const GLubyte* glGetString(GLenum name) {
+    auto& t = vmcr::vendor::gl();
+    return t.glGetString ? t.glGetString(name) : nullptr;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsBuffer(GLuint buffer) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsBuffer ? t.glIsBuffer(buffer) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsEnabled(GLenum cap) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsEnabled ? t.glIsEnabled(cap) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsFramebuffer(GLuint framebuffer) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsFramebuffer ? t.glIsFramebuffer(framebuffer) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsProgram(GLuint program) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsProgram ? t.glIsProgram(program) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsRenderbuffer(GLuint renderbuffer) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsRenderbuffer ? t.glIsRenderbuffer(renderbuffer) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsShader(GLuint shader) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsShader ? t.glIsShader(shader) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsTexture(GLuint texture) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsTexture ? t.glIsTexture(texture) : 0;
+}
+
+extern "C" VMCR_EXPORT GLboolean glIsVertexArray(GLuint array) {
+    auto& t = vmcr::vendor::gl();
+    return t.glIsVertexArray ? t.glIsVertexArray(array) : 0;
+}
+
+// ---------- 2 参数 ----------
+extern "C" VMCR_EXPORT GLint glGetAttribLocation(GLuint program, const GLchar* name) {
+    auto& t = vmcr::vendor::gl();
+    return t.glGetAttribLocation ? t.glGetAttribLocation(program, name) : -1;
+}
+
+extern "C" VMCR_EXPORT GLint glGetUniformLocation(GLuint program, const GLchar* name) {
+    auto& t = vmcr::vendor::gl();
+    return t.glGetUniformLocation ? t.glGetUniformLocation(program, name) : -1;
+}
 
 // =====================================================================
 // 全部 GLES 3.2 入口 (Phase 0/1: forward 到 vendor)
@@ -147,8 +215,6 @@ FWD1 (glClearStencil, GLint, s)
 FWD4 (glColorMask, GLboolean, r, GLboolean, g, GLboolean, b, GLboolean, a)
 FWD1 (glCompileShader, GLuint, shader)
 FWD8 (glCompressedTexImage2D, GLenum, target, GLint, level, GLenum, internalformat, GLsizei, width, GLsizei, height, GLint, border, GLsizei, imageSize, const GLvoid*, data)
-FWD_RET0 (glCreateProgram, GLuint, GLuint(0))
-FWD1 (glCreateShader, GLenum, type)
 FWD1 (glCullFace, GLenum, mode)
 FWD2 (glDeleteBuffers, GLsizei, n, const GLuint*, buffers)
 FWD2 (glDeleteFramebuffers, GLsizei, n, const GLuint*, framebuffers)
@@ -181,8 +247,6 @@ FWD2 (glGenVertexArrays, GLsizei, n, GLuint*, arrays)
 FWD7 (glGetActiveAttrib, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
 FWD7 (glGetActiveUniform, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
 FWD4 (glGetAttachedShaders, GLuint, program, GLsizei, maxCount, GLsizei*, count, GLuint*, shaders)
-FWD_RET2 (glGetAttribLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
-FWD_RET0 (glGetError, GLenum, 0)
 FWD2 (glGetFloatv, GLenum, pname, GLfloat*, params)
 FWD4 (glGetFramebufferAttachmentParameteriv, GLenum, target, GLenum, attachment, GLenum, pname, GLint*, params)
 FWD2 (glGetIntegerv, GLenum, pname, GLint*, params)
@@ -193,23 +257,13 @@ FWD4 (glGetShaderInfoLog, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GL
 FWD3 (glGetShaderiv, GLuint, shader, GLenum, pname, GLint*, params)
 FWD4 (glGetShaderPrecisionFormat, GLenum, shaderType, GLenum, precisionType, GLint*, range, GLint*, precision)
 FWD4 (glGetShaderSource, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GLchar*, source)
-FWD_RET1 (glGetString, const GLubyte*, GLenum, name, nullptr)
 FWD3 (glGetTexParameterfv, GLenum, target, GLenum, pname, GLfloat*, params)
 FWD3 (glGetTexParameteriv, GLenum, target, GLenum, pname, GLint*, params)
 FWD3 (glGetUniformfv, GLuint, program, GLint, location, GLfloat*, params)
 FWD3 (glGetUniformiv, GLuint, program, GLint, location, GLint*, params)
-FWD_RET2 (glGetUniformLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
 FWD3 (glGetVertexAttribfv, GLuint, index, GLenum, pname, GLfloat*, params)
 FWD3 (glGetVertexAttribiv, GLuint, index, GLenum, pname, GLint*, params)
 FWD2 (glHint, GLenum, target, GLenum, mode)
-FWD_RET1 (glIsBuffer, GLboolean, GLuint, buffer, 0)
-FWD_RET1 (glIsEnabled, GLboolean, GLenum, cap, 0)
-FWD_RET1 (glIsFramebuffer, GLboolean, GLuint, framebuffer, 0)
-FWD_RET1 (glIsProgram, GLboolean, GLuint, program, 0)
-FWD_RET1 (glIsRenderbuffer, GLboolean, GLuint, renderbuffer, 0)
-FWD_RET1 (glIsShader, GLboolean, GLuint, shader, 0)
-FWD_RET1 (glIsTexture, GLboolean, GLuint, texture, 0)
-FWD_RET1 (glIsVertexArray, GLboolean, GLuint, array, 0)
 FWD1 (glLineWidth, GLfloat, width)
 FWD1 (glLinkProgram, GLuint, program)
 FWD2 (glPixelStorei, GLenum, pname, GLint, param)
@@ -232,7 +286,7 @@ FWD3 (glTexParameterf, GLenum, target, GLenum, pname, GLfloat, param)
 FWD3 (glTexParameterfv, GLenum, target, GLenum, pname, const GLfloat*, params)
 FWD3 (glTexParameteri, GLenum, target, GLenum, pname, GLint, param)
 FWD3 (glTexParameteriv, GLenum, target, GLenum, pname, const GLint*, params)
-FWD8 (glTexSubImage2D, GLenum, target, GLint, level, GLint, xoffset, GLint, yoffset, GLsizei, width, GLsizei, height, GLenum, format, GLenum, type, const GLvoid*, pixels)
+FWD9 (glTexSubImage2D, GLenum, target, GLint, level, GLint, xoffset, GLint, yoffset, GLsizei, width, GLsizei, height, GLenum, format, GLenum, type, const GLvoid*, pixels)
 FWD2 (glUniform1f, GLint, location, GLfloat, v0)
 FWD3 (glUniform1fv, GLint, location, GLsizei, count, const GLfloat*, value)
 FWD2 (glUniform1i, GLint, location, GLint, v0)

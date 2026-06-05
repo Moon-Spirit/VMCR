@@ -148,12 +148,19 @@ bool VulkanRenderer::create_logical_device() noexcept {
         .pQueuePriorities = &prio,
     };
 
+    // 注意: 1.3 features 字段在不同 SDK 版本有差异
+    // 较新的 SDK 把 timelineSemaphore 移到了 1.2 features
+    VkPhysicalDeviceVulkan12Features f12{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .timelineSemaphore = VK_TRUE,
+        .bufferDeviceAddress = VK_TRUE,
+    };
     VkPhysicalDeviceVulkan13Features f13{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
         .dynamicRendering = VK_TRUE,
-        .timelineSemaphore = VK_TRUE,
         .synchronization2 = VK_TRUE,
     };
+    f12.pNext = &f13;
 
     const char* exts[] = {
         "VK_KHR_swapchain",

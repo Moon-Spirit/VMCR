@@ -1,14 +1,15 @@
-loader+vulkan: 修复 GL 入口作用域 + Vulkan Android 平台宏
+loader+vulkan: inline 化有返回值入口, 修复 1.3 features 字段
 
-1. gl_entry.cpp 把宏和入口都放在匿名 namespace 内,
-   导致 extern \"C\" 被 namespace 覆盖, 符号名为 namespace::glClear,
-   而不是 glClear. dlsym 找不到, MC 加载 libGL.so 会失败.
+1. gl_entry.cpp FWD_RET0/1/2 宏在 NDK clang 下产生
+   "type void" 错误 (宏的 token 拼接问题, 不可靠).
+   修复: 全部 inline 写出, 11 个有返回值入口.
 
-   修复: 全部移到文件作用域.
+2. glTexSubImage2D 有 9 个参数, 之前用 FWD8 (8 个) 编译失败.
+   修复: 改用 FWD9.
 
-2. vk_probe.cpp / vk_renderer.cpp 报 VkAndroidSurfaceCreateInfoKHR
-   未定义. 原因是 NDK 的 vulkan_android.h 需要 VK_USE_PLATFORM_ANDROID_KHR
-   宏才启用. 修复:
-   - src/main/cpp/vulkan/CMakeLists.txt: 加 target_compile_definitions
-     VK_USE_PLATFORM_ANDROID_KHR=1
-   - vmcr_probe.cpp: 显式 #include <vulkan/vulkan_android.h>
+3. vk_renderer.cpp 使用 VkPhysicalDeviceVulkan13Features
+   的 .timelineSemaphore 字段, 但 NDK 27.x / Vulkan SDK 1.4
+   的该 struct 已经没有这个字段 (被移到 1.2 features).
+   修复: 使用 VkPhysicalDeviceVulkan12Features 启用
+   timelineSemaphore + bufferDeviceAddress, 1.3 只保留
+   dynamicRendering + synchronization2.
