@@ -26,6 +26,16 @@ static inline void vmcr_forward_log(const char* name) {
     LOG_V(vmcr::log::kTagGL, "forward: %s", name);
 }
 
+// =====================================================================
+// 诊断计数器: 每次 GL 入口被调用时自增. 由 vmcr_init.cpp 在
+// JNI_OnUnload / 进程退出时 dump 到 stderr.
+// =====================================================================
+extern "C" {
+    void vmcr_loader_bump_get_integerv() noexcept;
+    void vmcr_loader_bump_get_string() noexcept;
+    void vmcr_loader_bump_get_stringi() noexcept;
+}
+
 namespace vmcr::loader {
 namespace {
 
@@ -137,6 +147,7 @@ extern "C" VMCR_EXPORT GLuint glCreateShader(GLenum type) {
 }
 
 extern "C" VMCR_EXPORT const GLubyte* glGetString(GLenum name) {
+    vmcr_loader_bump_get_string();
     auto& t = vmcr::vendor::gl();
     const GLubyte* r = t.glGetString ? t.glGetString(name) : nullptr;
     if (r) return r;
@@ -187,6 +198,7 @@ void ensure_extensions_loaded() {
 }  // namespace
 
 extern "C" VMCR_EXPORT const GLubyte* glGetStringi(GLenum name, GLuint index) {
+    vmcr_loader_bump_get_stringi();
     auto& t = vmcr::vendor::gl();
     // 优先用 vendor 的 glGetStringi (部分 Adreno 驱动支持)
     if (t.glGetStringi) {
@@ -215,6 +227,7 @@ extern "C" VMCR_EXPORT const GLubyte* glGetStringi(GLenum name, GLuint index) {
 // ---------------------------------------------------------------------------
 extern "C" VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
     if (!params) return;
+    vmcr_loader_bump_get_integerv();
 
     // ---- Step 1: pname 白名单过滤 ----
     if (!vmcr::gl_safe::is_gles_pname(pname)) {
