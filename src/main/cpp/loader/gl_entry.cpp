@@ -208,12 +208,30 @@ extern "C" VMCR_EXPORT const GLubyte* glGetStringi(GLenum name, GLuint index) {
 }
 
 // ---------------------------------------------------------------------------
-// glGetIntegerv - 带兜底的安全实现
-// vendor 返回 0 (或 < safe_min) 时, 用安全值兜底, 防止 MC 把 0
-// 当成有效上限而崩在 TextureAtlas 上
+// glGetIntegerv - 带白名单 + 兜底的安全实现
+// 1. pname 不在 GLES 3.2 白名单 -> *params=0, 不调 vendor, 避免 1280
+// 2. pname 在白名单内 -> 调 vendor, 然后对已知关键 pname 做最小值兜底
+// 3. 关键事件同时输出到 stderr, 让 FCL 日志能直接看到
 // ---------------------------------------------------------------------------
 extern "C" VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
     if (!params) return;
+
+    // ---- Step 1: pname 白名单过滤 ----
+    if (!vmcr::gl_safe::is_gles_pname(pname)) {
+        // desktop-only pname (e.g. GL_TEXTURE_BINDING_1D=0x8068 不是,
+        // 但 0x8064 在 1.20.1 渲染循环中被探测), 直接返回 0, 不调 vendor
+        // 避免触发 GL_INVALID_ENUM 错误日志刷屏.
+        *params = 0;
+        static int s_filtered = 0;
+        if ((s_filtered++ & 0xFF) == 0) {  // 每 256 次输出一次
+            std::fprintf(stderr,
+                "[VMCR-GL] glGetIntegerv(0x%04x) filtered (not in GLES3.2 whitelist), count=%d\n",
+                (unsigned)pname, s_filtered);
+        }
+        return;
+    }
+
+    // ---- Step 2: 转发到 vendor ----
     auto& t = vmcr::vendor::gl();
     if (t.glGetIntegerv) {
         t.glGetIntegerv(pname, params);
@@ -221,17 +239,22 @@ extern "C" VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
         *params = 0;
     }
 
+    // ---- Step 3: 关键 pname 兜底 ----
     if (vmcr::gl_safe::needs_safe_fallback(pname)) {
         GLint safe_min = vmcr::gl_safe::safe_min_for_pname(pname);
-        // GL_MAX_TEXTURE_SIZE 特殊: 永远保证 ≥ 4096, 防止 MC 1.7.10 atlas 崩溃
-        // (实测 Adreno 735 ≥ 16384, 兜底 4096 足以装 MC 32x 材质)
+        // GL_MAX_TEXTURE_SIZE 特殊: 永远保证 >= 16384 (Adreno 实测), 防止
+        // MC 1.7.10 TextureAtlas.maxTextureSize 变成 0 而崩
         if (pname == vmcr::gl_safe::pname::MAX_TEXTURE_SIZE) {
             safe_min = vmcr::gl_safe::kAdrenoMaxTextureSize > safe_min
                        ? vmcr::gl_safe::kAdrenoMaxTextureSize
                        : safe_min;
         }
         if (*params < safe_min) {
-            LOG_W(vmcr::log::kTagGL, "glGetIntegerv(0x%04x) vendor=%d, fallback to %d",
+            std::fprintf(stderr,
+                "[VMCR-GL] glGetIntegerv(0x%04x) vendor=%d -> fallback %d\n",
+                (unsigned)pname, (int)*params, (int)safe_min);
+            LOG_W(vmcr::log::kTagGL,
+                  "glGetIntegerv(0x%04x) vendor=%d, fallback %d",
                   (unsigned)pname, (int)*params, (int)safe_min);
             *params = safe_min;
         }
