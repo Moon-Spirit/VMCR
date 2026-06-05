@@ -1,0 +1,10 @@
+// ===========================================================================
+// src/main/cpp/core/CMakeLists.txt
+// ===========================================================================
+add_library(vmcr_core STATIC
+    backend_common.cpp
+    backend_factory.cpp)
+
+target_compile_features(vmcr_core PUBLIC cxx_std_20)
+target_include_directories(vmcr_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(vmcr_core PUBLIC log)
