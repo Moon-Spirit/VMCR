@@ -1,7 +1,6 @@
 # ===========================================================================
 # tools/vmcr_probe_tool/CMakeLists.txt
-# 独立 Vulkan 探测工具 - 主机侧构建, 设备上 adb push 后运行
-# ===========================================================================
+# 独立 Vulkan 探测工具 - 主机侧构�? 设备�?adb push 后运�?# ===========================================================================
 add_executable(vmcr_probe_tool main.cpp)
 
 target_link_libraries(vmcr_probe_tool PRIVATE vmcr_vulkan)

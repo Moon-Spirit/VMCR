@@ -23,7 +23,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(${CMAKE_SOURCE_DIR}/cmake/Options.cmake)
 
 # ===========================================================================
-# 2. Vulkan 头文件 / Loader
+# 2. Vulkan 头文�?/ Loader
 # ===========================================================================
 include(${CMAKE_SOURCE_DIR}/cmake/FindVulkan.cmake)
 
@@ -33,8 +33,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/FindVulkan.cmake)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # ===========================================================================
-# 4. 子模块
-# ===========================================================================
+# 4. 子模�?# ===========================================================================
 if(VMCR_ENABLE_VULKAN OR VMCR_ENABLE_GLES)
     add_subdirectory(src/main/cpp/core)
 endif()
@@ -58,7 +57,7 @@ if(VMCR_ENABLE_JNI)
 endif()
 
 # ===========================================================================
-# 5. 单元测试 (主机侧)
+# 5. 单元测试 (主机�?
 # ===========================================================================
 if(VMCR_ENABLE_UNIT_TEST)
     enable_testing()
@@ -68,9 +67,11 @@ endif()
 # ===========================================================================
 # 6. 安装规则
 # ===========================================================================
-include(CMakePackageConfigHelpers)
-install(TARGETS vmcr_loader
-    RUNTIME DESTINATION .
-    LIBRARY DESTINATION .)
+if(VMCR_ENABLE_LOADER)
+    include(CMakePackageConfigHelpers)
+    install(TARGETS vmcr_loader
+        RUNTIME DESTINATION .
+        LIBRARY DESTINATION .)
+endif()
 install(DIRECTORY configs/ DESTINATION configs/)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/ DESTINATION scripts/)

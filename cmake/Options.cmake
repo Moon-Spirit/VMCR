@@ -52,16 +52,41 @@ add_compile_definitions(
 )
 
 # ---- 通用警告与优化 -------------------------------------------------------
-add_compile_options(
-    -Wall -Wextra
-    -Wno-unused-parameter
-    -Wno-deprecated-declarations
-    -ffunction-sections -fdata-sections
-    -fvisibility=hidden
-    -fvisibility-inlines-hidden
-    $<$<CONFIG:Release>:-O3 -DNDEBUG>
-    $<$<CONFIG:RelWithDebInfo>:-O2 -g>
-    $<$<CONFIG:Debug>:-O0 -g3 -fno-omit-frame-pointer>)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options(
+        -Wall -Wextra
+        -Wno-unused-parameter
+        -Wno-deprecated-declarations
+        -ffunction-sections -fdata-sections
+        -fvisibility=hidden
+        -fvisibility-inlines-hidden)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    add_compile_options(
+        /W4
+        /wd4068           # unknown pragma
+        /wd4244           # conversion
+        /wd4267           # size_t conversion
+        /wd4996           # deprecated
+        /utf-8)
+endif()
+
+# Config-specific optimization (直接 set, 不依赖 generator expression)
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        add_compile_options(-O3)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_options(/O2)
+    endif()
+    add_compile_definitions(NDEBUG)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        add_compile_options(-O0 -g3)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_options(/Od /Zi)
+    endif()
+endif()
 
 # ---- ARM 专属 ------------------------------------------------------------
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")

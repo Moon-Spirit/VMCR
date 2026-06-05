@@ -65,7 +65,11 @@ private:
 }  // namespace vmcr::gles
 
 // 工厂入口
-extern "C" __attribute__((visibility("default")))
-vmcr::RendererPtr vmcr_renderer_create() {
-    return std::make_unique<vmcr::gles::GlesRenderer>();
+extern "C" {
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+void* vmcr_renderer_create() {
+    return new vmcr::gles::GlesRenderer();
 }
+}  // extern "C"

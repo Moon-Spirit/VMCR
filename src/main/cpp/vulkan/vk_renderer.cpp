@@ -12,7 +12,10 @@
 #include "vmcr/log.h"
 
 #include <vulkan/vulkan.h>
+
+#ifdef __ANDROID__
 #include <android/native_window.h>
+#endif
 
 #include <algorithm>
 #include <cstring>
@@ -473,7 +476,11 @@ void VulkanRenderer::end_frame() noexcept {
 }  // namespace vmcr::vk
 
 // 工厂入口 - 由 dlopen 加载
-extern "C" __attribute__((visibility("default")))
-vmcr::RendererPtr vmcr_renderer_create() {
-    return std::make_unique<vmcr::vk::VulkanRenderer>();
+extern "C" {
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+void* vmcr_renderer_create() {
+    return new vmcr::vk::VulkanRenderer();
 }
+}  // extern "C"

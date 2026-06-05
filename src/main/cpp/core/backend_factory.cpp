@@ -8,8 +8,8 @@
 // ===========================================================================
 #include "vmcr/backend.h"
 #include "vmcr/log.h"
+#include "vmcr/dl.h"
 
-#include <dlfcn.h>
 #include <cstring>
 #include <mutex>
 #include <vector>
@@ -52,39 +52,39 @@ IRenderer* BackendFactory::create(RendererTier force_tier) noexcept {
         LOG_I(tag, "Trying backend: %s (tier=%s)",
               e.so_name, tier_to_string(e.tier));
 
-        void* handle = ::dlopen(e.so_name, RTLD_NOW | RTLD_LOCAL);
+        VMCR_DL_HANDLE handle = VMCR_DL_OPEN(e.so_name);
         if (!handle) {
-            LOG_W(tag, "  dlopen(%s) failed: %s", e.so_name, ::dlerror());
+            LOG_W(tag, "  dlopen(%s) failed: %s", e.so_name, VMCR_DL_ERROR());
             continue;
         }
 
-        using CreateFn = RendererPtr (*)();
-        auto fn = reinterpret_cast<CreateFn>(::dlsym(handle, "vmcr_renderer_create"));
+        using CreateFn = void* (*)();
+        auto fn = reinterpret_cast<CreateFn>(VMCR_DL_SYM(handle, "vmcr_renderer_create"));
         if (!fn) {
             LOG_W(tag, "  dlsym(vmcr_renderer_create) failed in %s: %s",
-                  e.so_name, ::dlerror());
-            ::dlclose(handle);
+                  e.so_name, VMCR_DL_ERROR());
+            VMCR_DL_CLOSE(handle);
             continue;
         }
 
-        RendererPtr r;
+        IRenderer* r = nullptr;
         try {
-            r = fn();
-        } catch (const std::exception& ex) {
-            LOG_E(tag, "  backend create threw: %s", ex.what());
-            ::dlclose(handle);
+            r = static_cast<IRenderer*>(fn());
+        } catch (...) {
+            LOG_E(tag, "  backend create threw");
+            VMCR_DL_CLOSE(handle);
             continue;
         }
 
         if (!r) {
             LOG_W(tag, "  backend create returned nullptr");
-            ::dlclose(handle);
+            VMCR_DL_CLOSE(handle);
             continue;
         }
 
         LOG_I(tag, "Loaded backend: %s -> %s",
               e.so_name, r->name());
-        return r.release();
+        return r;
     }
 
     LOG_E(tag, "No backend available (force_tier=%s)",

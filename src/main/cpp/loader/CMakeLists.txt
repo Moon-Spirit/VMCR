@@ -1,10 +1,10 @@
-// ===========================================================================
-// src/main/cpp/loader/CMakeLists.txt
-//
-// 产物: libGL.so (被 FCL 当作 OpenGL ES 库加载)
-// 暴露: glClear, glDrawElements, ... 全部 GLES 3.2 入口
-//       JNI_OnLoad, JNI_OnUnload
-// ===========================================================================
+# ===========================================================================
+# src/main/cpp/loader/CMakeLists.txt
+#
+# 产物: libGL.so (�?FCL 当作 OpenGL ES 库加�?
+# 暴露: glClear, glDrawElements, ... 全部 GLES 3.2 入口
+#       JNI_OnLoad, JNI_OnUnload
+# ===========================================================================
 add_library(vmcr_loader SHARED
     gl_entry.cpp
     vmcr_init.cpp

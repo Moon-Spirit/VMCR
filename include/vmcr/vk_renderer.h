@@ -7,7 +7,13 @@
 #include "vmcr/backend.h"
 
 #include <vulkan/vulkan.h>
+
+#ifdef __ANDROID__
 #include <android/native_window.h>
+#else
+// 主机侧 fallback: 用 void* 占位
+struct ANativeWindow;
+#endif
 
 #include <vector>
 
