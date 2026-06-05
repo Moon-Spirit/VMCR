@@ -150,15 +150,16 @@ bool VulkanRenderer::create_logical_device() noexcept {
 
     // 注意: 1.3 features 字段在不同 SDK 版本有差异
     // 较新的 SDK 把 timelineSemaphore 移到了 1.2 features
+    // 字段顺序必须与 struct 定义一致 (C99/C++ designated init)
+    VkPhysicalDeviceVulkan13Features f13{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .synchronization2 = VK_TRUE,        // synchronization2 在前
+        .dynamicRendering = VK_TRUE,        // dynamicRendering 在后 (按 struct 顺序)
+    };
     VkPhysicalDeviceVulkan12Features f12{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .timelineSemaphore = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
-    };
-    VkPhysicalDeviceVulkan13Features f13{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .dynamicRendering = VK_TRUE,
-        .synchronization2 = VK_TRUE,
     };
     f12.pNext = &f13;
 
@@ -227,10 +228,8 @@ bool VulkanRenderer::create_swapchain(ANativeWindow* window, uint32_t w, uint32_
 
     destroy_swapchain();
 
-    width_  = w;
-    height_ = h;
-
-    // 创建 surface
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    // 创建 surface (仅 Android)
     VkAndroidSurfaceCreateInfoKHR asci{
         .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
         .window = window,
@@ -240,7 +239,15 @@ bool VulkanRenderer::create_swapchain(ANativeWindow* window, uint32_t w, uint32_
         LOG_E(kTag, "vkCreateAndroidSurfaceKHR failed");
         return false;
     }
+#else
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+#endif
 
+    width_  = w;
+    height_ = h;
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    // surface 已在前面 (Android 平台) 或保持 VK_NULL_HANDLE (主机)
     // 查询 surface 能力
     VkSurfaceCapabilitiesKHR caps;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_, surface, &caps);
@@ -363,6 +370,12 @@ bool VulkanRenderer::create_swapchain(ANativeWindow* window, uint32_t w, uint32_
     swapchain_ready_ = true;
     LOG_I(kTag, "[SWAPCHAIN] %u images %ux%u", ic, extent.width, extent.height);
     return true;
+#else
+    // 主机构建: 没有真 surface, swapchain 不可用
+    swapchain_ready_ = false;
+    LOG_W(kTag, "[VK] create_swapchain noop on host (no surface)");
+    return false;
+#endif
 }
 
 void VulkanRenderer::destroy_swapchain() noexcept {
