@@ -22,6 +22,7 @@
 
   "libraries": [
     "libGL.so",
+    "libEGL.so",
     "libvmcr_vk.so",
     "libvmcr_gles.so",
     "libvmcr_jni.so"
