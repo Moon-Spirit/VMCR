@@ -92,6 +92,10 @@ inline void forward_gl(const char* name) {
         if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8, p9); \
     }
 
+// RET 宏: 返回值版本. 签名: FWD_RETN(name, ret, ret_init, N, ...)
+//   N = 参数个数 (匹配 FWD0..FWD9)
+//   参数列表展开 (T1, p1, T2, p2, ...)
+//   ret_init = 失败时返回的默认值
 #define FWD_RET0(name, ret, ret_init) \
     extern "C" VMCR_EXPORT ret name() { \
         forward_gl(#name); \
@@ -105,6 +109,14 @@ inline void forward_gl(const char* name) {
         forward_gl(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) return t.name(p1); \
+        return ret_init; \
+    }
+
+#define FWD_RET2(name, ret, T1, p1, T2, p2, ret_init) \
+    extern "C" VMCR_EXPORT ret name(T1 p1, T2 p2) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) return t.name(p1, p2); \
         return ret_init; \
     }
 
@@ -170,7 +182,7 @@ FWD2 (glGenVertexArrays, GLsizei, n, GLuint*, arrays)
 FWD7 (glGetActiveAttrib, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
 FWD7 (glGetActiveUniform, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
 FWD4 (glGetAttachedShaders, GLuint, program, GLsizei, maxCount, GLsizei*, count, GLuint*, shaders)
-FWD_RET1 (glGetAttribLocation, GLint, GLuint, program, const GLchar*, name)
+FWD_RET2 (glGetAttribLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
 FWD_RET0 (glGetError, GLenum, GLenum(GL_NO_ERROR))
 FWD2 (glGetFloatv, GLenum, pname, GLfloat*, params)
 FWD4 (glGetFramebufferAttachmentParameteriv, GLenum, target, GLenum, attachment, GLenum, pname, GLint*, params)
@@ -187,7 +199,7 @@ FWD3 (glGetTexParameterfv, GLenum, target, GLenum, pname, GLfloat*, params)
 FWD3 (glGetTexParameteriv, GLenum, target, GLenum, pname, GLint*, params)
 FWD3 (glGetUniformfv, GLuint, program, GLint, location, GLfloat*, params)
 FWD3 (glGetUniformiv, GLuint, program, GLint, location, GLint*, params)
-FWD_RET1 (glGetUniformLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
+FWD_RET2 (glGetUniformLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
 FWD3 (glGetVertexAttribfv, GLuint, index, GLenum, pname, GLfloat*, params)
 FWD3 (glGetVertexAttribiv, GLuint, index, GLenum, pname, GLint*, params)
 FWD2 (glHint, GLenum, target, GLenum, mode)
