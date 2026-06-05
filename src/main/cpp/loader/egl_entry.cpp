@@ -11,6 +11,8 @@
 #include "vmcr/export.h"
 
 #include <cstring>
+#include <cstdio>
+#include <string>
 #include <dlfcn.h>
 
 extern "C" {
@@ -103,21 +105,64 @@ VMCR_EXPORT EGLBoolean EGLAPIENTRY eglSwapInterval(EGLDisplay dpy, EGLint interv
 VMCR_EXPORT __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char* name) {
     if (!name) return nullptr;
+
+    // ---- 关键: 优先返回我们自己 libGL.so 的函数指针 ----
+    // FCL/Pojav 的 EGL 桥通过 eglGetProcAddress 获取 GL 函数, 拿到的是
+    // vendor (Adreno) 的真实函数指针, 我们的 shim 被绕过.
+    // 这里强制先从我们的 libGL.so 解析, 命中即返回 shim 函数.
+    //
+    // 因为我们的 libGL.so 没有 DT_SONAME, dlopen("libGL.so") 找不到.
+    // 通过 dladdr 拿到 libEGL.so 的全路径, 把 "libEGL.so" 替换成 "libGL.so"
+    // 即得到 libGL.so 的全路径. FCL 同一个 APK 把两个库放同目录.
+    static void* s_our_libGL = nullptr;
+    if (!s_our_libGL) {
+        Dl_info info{};
+        // 用本函数地址反查 libEGL.so 路径
+        if (::dladdr(reinterpret_cast<const void*>(&eglGetProcAddress), &info)
+            && info.dli_fname) {
+            std::string path(info.dli_fname);
+            const std::string from = "/libEGL.so";
+            const std::string to   = "/libGL.so";
+            auto pos = path.rfind(from);
+            if (pos != std::string::npos) {
+                path.replace(pos, from.size(), to);
+                s_our_libGL = ::dlopen(path.c_str(), RTLD_NOW | RTLD_NOLOAD);
+                if (s_our_libGL) {
+                    std::fprintf(stderr,
+                        "[VMCR-GL] eglGetProcAddress: locked our libGL.so at %s\n",
+                        path.c_str());
+                    std::fflush(stderr);
+                    LOG_I(vmcr::log::kTagGL,
+                          "eglGetProcAddress: locked our libGL.so at %s", path.c_str());
+                } else {
+                    std::fprintf(stderr,
+                        "[VMCR-GL] eglGetProcAddress: dlopen(%s) failed: %s\n",
+                        path.c_str(), ::dlerror());
+                }
+            }
+        }
+        if (!s_our_libGL) {
+            LOG_W(vmcr::log::kTagGL, "eglGetProcAddress: could not find our libGL.so, falling back to vendor");
+        }
+    }
+    if (s_our_libGL) {
+        void* ours = ::dlsym(s_our_libGL, name);
+        if (ours) {
+            return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(ours);
+        }
+    }
+
+    // ---- vendor (Adreno) 路径 ----
     auto& e = vmcr::vendor::egl();
-    // vendor 返回 void*, EGL 规范要求函数指针. reinterpret_cast 转换
     void* p = e.eglGetProcAddress ? e.eglGetProcAddress(name) : nullptr;
     if (p) return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(p);
 
-    // 兜底: vendor 返回 null 时, 尝试用 dlsym 解析
-    // - 解决部分 Adreno 驱动 eglGetProcAddress 不导出某些 ES3.x 函数的问题
-    // - LWJGL3 在 Android 上优先用 eglGetProcAddress, 但部分 dlsym 才能找到
-    //   的扩展函数 (e.g. GL_EXT_buffer_storage) 会拿不到
+    // 兜底: 试 libGLESv2.so
     if (auto* handle = ::dlopen("libGLESv2.so", RTLD_NOW | RTLD_NOLOAD)) {
         p = ::dlsym(handle, name);
         ::dlclose(handle);
     }
     if (!p) {
-        // 第二次兜底: 试 libEGL.so (部分平台 EGL 内部函数)
         if (auto* handle = ::dlopen("libEGL.so", RTLD_NOW | RTLD_NOLOAD)) {
             p = ::dlsym(handle, name);
             ::dlclose(handle);
