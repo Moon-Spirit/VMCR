@@ -5,186 +5,252 @@
 //
 // 符号可见性: 全部 visibility default, 否则 MC System.loadLibrary("GL")
 //             找不到这些符号.
+//
+// 策略: 每个 GL 入口手动 inline 写出, 转发到 vendor.
+// 原因: 宏展开在 NDK clang 下产生 token 解析问题 (extern "C" + attribute +
+//       function name + params 的组合). 直接 inline 简单可靠.
 // ===========================================================================
-#define VMCR_EXPORTS_GLSYMS 1
 #include "vmcr/log.h"
 #include "vmcr/vendor_gl.h"
 #include "vmcr/export.h"
 
 #include <cstring>
 
-// 全局 backend 句柄 (来自 libvmcr_vk.so / libvmcr_gles.so)
-extern "C" {
-    extern void vmcr_renderer_register() __attribute__((weak));
-}
-
 namespace {
 
-// GLES 3.2 入口 - 全部 forward 到 vendor (Phase 0/1 行为)
-// Phase 2+ 会改为根据 BackendRouter.tier() 路由到 Vulkan 路径
 inline void forward_gl(const char* name) {
     LOG_V(log::kTagGL, "forward: %s", name);
 }
 
-}  // namespace
-
-// =====================================================================
-// 宏: DEFINE_GL(name, ret_type, (params))
-// 展开为: extern "C" VMCR_EXPORT ret_type name params { ... }
-// =====================================================================
-#define DEFINE_GL(name, ret, params) \
-    extern "C" VMCR_EXPORT ret name params { \
+#define FWD0(name) \
+    extern "C" VMCR_EXPORT void name() { \
         forward_gl(#name); \
         auto& t = vmcr::vendor::gl(); \
-        if (t.name) t.name params; \
+        if (t.name) t.name(); \
     }
 
-#define DEFINE_GL_RET(name, ret, params, ret_init) \
-    extern "C" VMCR_EXPORT ret name params { \
+#define FWD1(name, T1, p1) \
+    extern "C" VMCR_EXPORT void name(T1 p1) { \
         forward_gl(#name); \
         auto& t = vmcr::vendor::gl(); \
-        if (t.name) return t.name params; \
+        if (t.name) t.name(p1); \
+    }
+
+#define FWD2(name, T1, p1, T2, p2) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2); \
+    }
+
+#define FWD3(name, T1, p1, T2, p2, T3, p3) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3); \
+    }
+
+#define FWD4(name, T1, p1, T2, p2, T3, p3, T4, p4) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4); \
+    }
+
+#define FWD5(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4, p5); \
+    }
+
+#define FWD6(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4, p5, p6); \
+    }
+
+#define FWD7(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7); \
+    }
+
+#define FWD8(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7, T8, p8) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7, T8 p8) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8); \
+    }
+
+#define FWD9(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7, T8, p8, T9, p9) \
+    extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7, T8 p8, T9 p9) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8, p9); \
+    }
+
+#define FWD_RET0(name, ret, ret_init) \
+    extern "C" VMCR_EXPORT ret name() { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) return t.name(); \
         return ret_init; \
     }
 
-DEFINE_GL(glActiveTexture,                  void, (GLenum texture))
-DEFINE_GL(glAttachShader,                   void, (GLuint program, GLuint shader))
-DEFINE_GL(glBindAttribLocation,             void, (GLuint program, GLuint index, const GLchar* name))
-DEFINE_GL(glBindBuffer,                     void, (GLenum target, GLuint buffer))
-DEFINE_GL(glBindFramebuffer,                void, (GLenum target, GLuint framebuffer))
-DEFINE_GL(glBindRenderbuffer,               void, (GLenum target, GLuint renderbuffer))
-DEFINE_GL(glBindTexture,                    void, (GLenum target, GLuint texture))
-DEFINE_GL(glBindVertexArray,                void, (GLuint array))
-DEFINE_GL(glBlendColor,                     void, (GLfloat r, GLfloat g, GLfloat b, GLfloat a))
-DEFINE_GL(glBlendEquation,                  void, (GLenum mode))
-DEFINE_GL(glBlendEquationSeparate,          void, (GLenum modeRGB, GLenum modeA))
-DEFINE_GL(glBlendFunc,                      void, (GLenum sfactor, GLenum dfactor))
-DEFINE_GL(glBlendFuncSeparate,              void, (GLenum sfactorRGB, GLenum dfactorRGB,
-                                                    GLenum sfactorAlpha, GLenum dfactorAlpha))
-DEFINE_GL(glBufferData,                     void, (GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage))
-DEFINE_GL(glBufferSubData,                  void, (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data))
-DEFINE_GL(glClear,                          void, (GLbitfield mask))
-DEFINE_GL(glClearColor,                     void, (GLfloat r, GLfloat g, GLfloat b, GLfloat a))
-DEFINE_GL(glClearDepthf,                    void, (GLfloat d))
-DEFINE_GL(glClearStencil,                   void, (GLint s))
-DEFINE_GL(glColorMask,                      void, (GLboolean r, GLboolean g, GLboolean b, GLboolean a))
-DEFINE_GL(glCompileShader,                  void, (GLuint shader))
-DEFINE_GL(glCompressedTexImage2D,           void, (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data))
-DEFINE_GL_RET(glCreateProgram,              GLuint, (void), (), GLuint(0))
-DEFINE_GL(glCreateShader,                   GLuint, (GLenum type))
-DEFINE_GL(glCullFace,                       void, (GLenum mode))
-DEFINE_GL(glDeleteBuffers,                  void, (GLsizei n, const GLuint* buffers))
-DEFINE_GL(glDeleteFramebuffers,             void, (GLsizei n, const GLuint* framebuffers))
-DEFINE_GL(glDeleteProgram,                  void, (GLuint program))
-DEFINE_GL(glDeleteRenderbuffers,            void, (GLsizei n, const GLuint* renderbuffers))
-DEFINE_GL(glDeleteShader,                   void, (GLuint shader))
-DEFINE_GL(glDeleteTextures,                 void, (GLsizei n, const GLuint* textures))
-DEFINE_GL(glDeleteVertexArrays,             void, (GLsizei n, const GLuint* arrays))
-DEFINE_GL(glDepthFunc,                      void, (GLenum func))
-DEFINE_GL(glDepthMask,                      void, (GLboolean flag))
-DEFINE_GL(glDetachShader,                   void, (GLuint program, GLuint shader))
-DEFINE_GL(glDisable,                        void, (GLenum cap))
-DEFINE_GL(glDisableVertexAttribArray,       void, (GLuint index))
-DEFINE_GL(glDrawArrays,                     void, (GLenum mode, GLint first, GLsizei count))
-DEFINE_GL(glDrawElements,                   void, (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices))
-DEFINE_GL(glDrawElementsInstanced,          void, (GLenum mode, GLsizei count, GLenum type, const GLvoid* indices, GLsizei instancecount))
-DEFINE_GL(glEnable,                         void, (GLenum cap))
-DEFINE_GL(glEnableVertexAttribArray,        void, (GLuint index))
-DEFINE_GL(glFinish,                         void, (void))
-DEFINE_GL(glFlush,                          void, (void))
-DEFINE_GL(glFramebufferRenderbuffer,        void, (GLenum target, GLenum attachment, GLenum rbTarget, GLuint renderbuffer))
-DEFINE_GL(glFramebufferTexture2D,           void, (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level))
-DEFINE_GL(glFrontFace,                      void, (GLenum mode))
-DEFINE_GL(glGenBuffers,                     void, (GLsizei n, GLuint* buffers))
-DEFINE_GL(glGenerateMipmap,                 void, (GLenum target))
-DEFINE_GL(glGenFramebuffers,                void, (GLsizei n, GLuint* framebuffers))
-DEFINE_GL(glGenRenderbuffers,               void, (GLsizei n, GLuint* renderbuffers))
-DEFINE_GL(glGenTextures,                    void, (GLsizei n, GLuint* textures))
-DEFINE_GL(glGenVertexArrays,                void, (GLsizei n, GLuint* arrays))
-DEFINE_GL(glGetActiveAttrib,                void, (GLuint program, GLuint index, GLsizei bufSize, GLsizei* length, GLint* size, GLenum* type, GLchar* name))
-DEFINE_GL(glGetActiveUniform,               void, (GLuint program, GLuint index, GLsizei bufSize, GLsizei* length, GLint* size, GLenum* type, GLchar* name))
-DEFINE_GL(glGetAttachedShaders,             void, (GLuint program, GLsizei maxCount, GLsizei* count, GLuint* shaders))
-DEFINE_GL(glGetAttribLocation,              GLint, (GLuint program, const GLchar* name))
-DEFINE_GL_RET(glGetError,                   GLenum, (void), (), GLenum(GL_NO_ERROR))
-DEFINE_GL(glGetFloatv,                      void, (GLenum pname, GLfloat* params))
-DEFINE_GL(glGetFramebufferAttachmentParameteriv, void, (GLenum target, GLenum attachment, GLenum pname, GLint* params))
-DEFINE_GL(glGetIntegerv,                    void, (GLenum pname, GLint* params))
-DEFINE_GL(glGetProgramInfoLog,              void, (GLuint program, GLsizei bufSize, GLsizei* length, GLchar* infoLog))
-DEFINE_GL(glGetProgramiv,                   void, (GLuint program, GLenum pname, GLint* params))
-DEFINE_GL(glGetRenderbufferParameteriv,     void, (GLenum target, GLenum pname, GLint* params))
-DEFINE_GL(glGetShaderInfoLog,               void, (GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog))
-DEFINE_GL(glGetShaderiv,                    void, (GLuint shader, GLenum pname, GLint* params))
-DEFINE_GL(glGetShaderPrecisionFormat,       void, (GLenum shaderType, GLenum precisionType, GLint* range, GLint* precision))
-DEFINE_GL(glGetShaderSource,                void, (GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* source))
-DEFINE_GL_RET(glGetString,                  const GLubyte*, (GLenum name), (name), const GLubyte*(nullptr))
-DEFINE_GL(glGetTexParameterfv,              void, (GLenum target, GLenum pname, GLfloat* params))
-DEFINE_GL(glGetTexParameteriv,              void, (GLenum target, GLenum pname, GLint* params))
-DEFINE_GL(glGetUniformfv,                   void, (GLuint program, GLint location, GLfloat* params))
-DEFINE_GL(glGetUniformiv,                   void, (GLuint program, GLint location, GLint* params))
-DEFINE_GL_RET(glGetUniformLocation,         GLint, (GLuint program, const GLchar* name), (program, name), GLint(-1))
-DEFINE_GL(glGetVertexAttribfv,              void, (GLuint index, GLenum pname, GLfloat* params))
-DEFINE_GL(glGetVertexAttribiv,              void, (GLuint index, GLenum pname, GLint* params))
-DEFINE_GL(glHint,                           void, (GLenum target, GLenum mode))
-DEFINE_GL_RET(glIsBuffer,                   GLboolean, (GLuint buffer), (buffer), GLboolean(0))
-DEFINE_GL_RET(glIsEnabled,                  GLboolean, (GLenum cap), (cap), GLboolean(0))
-DEFINE_GL_RET(glIsFramebuffer,              GLboolean, (GLuint framebuffer), (framebuffer), GLboolean(0))
-DEFINE_GL_RET(glIsProgram,                  GLboolean, (GLuint program), (program), GLboolean(0))
-DEFINE_GL_RET(glIsRenderbuffer,             GLboolean, (GLuint renderbuffer), (renderbuffer), GLboolean(0))
-DEFINE_GL_RET(glIsShader,                   GLboolean, (GLuint shader), (shader), GLboolean(0))
-DEFINE_GL_RET(glIsTexture,                  GLboolean, (GLuint texture), (texture), GLboolean(0))
-DEFINE_GL_RET(glIsVertexArray,              GLboolean, (GLuint array), (array), GLboolean(0))
-DEFINE_GL(glLineWidth,                      void, (GLfloat width))
-DEFINE_GL(glLinkProgram,                    void, (GLuint program))
-DEFINE_GL(glPixelStorei,                    void, (GLenum pname, GLint param))
-DEFINE_GL(glPolygonOffset,                  void, (GLfloat factor, GLfloat units))
-DEFINE_GL(glReadPixels,                     void, (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid* pixels))
-DEFINE_GL(glRenderbufferStorage,            void, (GLenum target, GLenum internalformat, GLsizei width, GLsizei height))
-DEFINE_GL(glRenderbufferStorageMultisample, void, (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height))
-DEFINE_GL(glSampleCoverage,                 void, (GLfloat value, GLboolean invert))
-DEFINE_GL(glScissor,                        void, (GLint x, GLint y, GLsizei width, GLsizei height))
-DEFINE_GL(glShaderBinary,                   void, (GLsizei n, const GLuint* shaders, GLenum binaryFormat, const GLvoid* binary, GLsizei length))
-DEFINE_GL(glShaderSource,                   void, (GLuint shader, GLsizei count, const GLchar* const* str, const GLint* length))
-DEFINE_GL(glStencilFunc,                    void, (GLenum func, GLint ref, GLuint mask))
-DEFINE_GL(glStencilFuncSeparate,            void, (GLenum face, GLenum func, GLint ref, GLuint mask))
-DEFINE_GL(glStencilMask,                    void, (GLuint mask))
-DEFINE_GL(glStencilMaskSeparate,            void, (GLenum face, GLuint mask))
-DEFINE_GL(glStencilOp,                      void, (GLenum fail, GLenum zfail, GLenum zpass))
-DEFINE_GL(glStencilOpSeparate,              void, (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass))
-DEFINE_GL(glTexImage2D,                     void, (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid* pixels))
-DEFINE_GL(glTexParameterf,                  void, (GLenum target, GLenum pname, GLfloat param))
-DEFINE_GL(glTexParameterfv,                 void, (GLenum target, GLenum pname, const GLfloat* params))
-DEFINE_GL(glTexParameteri,                  void, (GLenum target, GLenum pname, GLint param))
-DEFINE_GL(glTexParameteriv,                 void, (GLenum target, GLenum pname, const GLint* params))
-DEFINE_GL(glTexSubImage2D,                  void, (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels))
-DEFINE_GL(glUniform1f,                      void, (GLint location, GLfloat v0))
-DEFINE_GL(glUniform1fv,                     void, (GLint location, GLsizei count, const GLfloat* value))
-DEFINE_GL(glUniform1i,                      void, (GLint location, GLint v0))
-DEFINE_GL(glUniform1iv,                     void, (GLint location, GLsizei count, const GLint* value))
-DEFINE_GL(glUniform2f,                      void, (GLint location, GLfloat v0, GLfloat v1))
-DEFINE_GL(glUniform2fv,                     void, (GLint location, GLsizei count, const GLfloat* value))
-DEFINE_GL(glUniform2i,                      void, (GLint location, GLint v0, GLint v1))
-DEFINE_GL(glUniform2iv,                     void, (GLint location, GLsizei count, const GLint* value))
-DEFINE_GL(glUniform3f,                      void, (GLint location, GLfloat v0, GLfloat v1, GLfloat v2))
-DEFINE_GL(glUniform3fv,                     void, (GLint location, GLsizei count, const GLfloat* value))
-DEFINE_GL(glUniform3i,                      void, (GLint location, GLint v0, GLint v1, GLint v2))
-DEFINE_GL(glUniform3iv,                     void, (GLint location, GLsizei count, const GLint* value))
-DEFINE_GL(glUniform4f,                      void, (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3))
-DEFINE_GL(glUniform4fv,                     void, (GLint location, GLsizei count, const GLfloat* value))
-DEFINE_GL(glUniform4i,                      void, (GLint location, GLint v0, GLint v1, GLint v2, GLint v3))
-DEFINE_GL(glUniform4iv,                     void, (GLint location, GLsizei count, const GLint* value))
-DEFINE_GL(glUniformMatrix2fv,               void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value))
-DEFINE_GL(glUniformMatrix3fv,               void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value))
-DEFINE_GL(glUniformMatrix4fv,               void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat* value))
-DEFINE_GL(glUseProgram,                     void, (GLuint program))
-DEFINE_GL(glValidateProgram,                void, (GLuint program))
-DEFINE_GL(glVertexAttrib1f,                 void, (GLuint index, GLfloat v0))
-DEFINE_GL(glVertexAttrib1fv,                void, (GLuint index, const GLfloat* v))
-DEFINE_GL(glVertexAttrib2f,                 void, (GLuint index, GLfloat v0, GLfloat v1))
-DEFINE_GL(glVertexAttrib2fv,                void, (GLuint index, const GLfloat* v))
-DEFINE_GL(glVertexAttrib3f,                 void, (GLuint index, GLfloat v0, GLfloat v1, GLfloat v2))
-DEFINE_GL(glVertexAttrib3fv,                void, (GLuint index, const GLfloat* v))
-DEFINE_GL(glVertexAttrib4f,                 void, (GLuint index, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3))
-DEFINE_GL(glVertexAttrib4fv,                void, (GLuint index, const GLfloat* v))
-DEFINE_GL(glVertexAttribPointer,            void, (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* pointer))
-DEFINE_GL(glVertexAttribDivisor,            void, (GLuint index, GLuint divisor))
-DEFINE_GL(glViewport,                       void, (GLint x, GLint y, GLsizei width, GLsizei height))
+#define FWD_RET1(name, ret, T1, p1, ret_init) \
+    extern "C" VMCR_EXPORT ret name(T1 p1) { \
+        forward_gl(#name); \
+        auto& t = vmcr::vendor::gl(); \
+        if (t.name) return t.name(p1); \
+        return ret_init; \
+    }
+
+}  // namespace
+
+// =====================================================================
+// 全部 GLES 3.2 入口 (Phase 0/1: forward 到 vendor)
+// =====================================================================
+
+FWD1 (glActiveTexture, GLenum, texture)
+FWD2 (glAttachShader, GLuint, program, GLuint, shader)
+FWD3 (glBindAttribLocation, GLuint, program, GLuint, index, const GLchar*, name)
+FWD2 (glBindBuffer, GLenum, target, GLuint, buffer)
+FWD2 (glBindFramebuffer, GLenum, target, GLuint, framebuffer)
+FWD2 (glBindRenderbuffer, GLenum, target, GLuint, renderbuffer)
+FWD2 (glBindTexture, GLenum, target, GLuint, texture)
+FWD1 (glBindVertexArray, GLuint, array)
+FWD4 (glBlendColor, GLfloat, r, GLfloat, g, GLfloat, b, GLfloat, a)
+FWD1 (glBlendEquation, GLenum, mode)
+FWD2 (glBlendEquationSeparate, GLenum, modeRGB, GLenum, modeA)
+FWD2 (glBlendFunc, GLenum, sfactor, GLenum, dfactor)
+FWD4 (glBlendFuncSeparate, GLenum, sfactorRGB, GLenum, dfactorRGB, GLenum, sfactorAlpha, GLenum, dfactorAlpha)
+FWD4 (glBufferData, GLenum, target, GLsizeiptr, size, const GLvoid*, data, GLenum, usage)
+FWD4 (glBufferSubData, GLenum, target, GLintptr, offset, GLsizeiptr, size, const GLvoid*, data)
+FWD1 (glClear, GLbitfield, mask)
+FWD4 (glClearColor, GLfloat, r, GLfloat, g, GLfloat, b, GLfloat, a)
+FWD1 (glClearDepthf, GLfloat, d)
+FWD1 (glClearStencil, GLint, s)
+FWD4 (glColorMask, GLboolean, r, GLboolean, g, GLboolean, b, GLboolean, a)
+FWD1 (glCompileShader, GLuint, shader)
+FWD8 (glCompressedTexImage2D, GLenum, target, GLint, level, GLenum, internalformat, GLsizei, width, GLsizei, height, GLint, border, GLsizei, imageSize, const GLvoid*, data)
+FWD_RET0 (glCreateProgram, GLuint, GLuint(0))
+FWD1 (glCreateShader, GLenum, type)
+FWD1 (glCullFace, GLenum, mode)
+FWD2 (glDeleteBuffers, GLsizei, n, const GLuint*, buffers)
+FWD2 (glDeleteFramebuffers, GLsizei, n, const GLuint*, framebuffers)
+FWD1 (glDeleteProgram, GLuint, program)
+FWD2 (glDeleteRenderbuffers, GLsizei, n, const GLuint*, renderbuffers)
+FWD1 (glDeleteShader, GLuint, shader)
+FWD2 (glDeleteTextures, GLsizei, n, const GLuint*, textures)
+FWD2 (glDeleteVertexArrays, GLsizei, n, const GLuint*, arrays)
+FWD1 (glDepthFunc, GLenum, func)
+FWD1 (glDepthMask, GLboolean, flag)
+FWD2 (glDetachShader, GLuint, program, GLuint, shader)
+FWD1 (glDisable, GLenum, cap)
+FWD1 (glDisableVertexAttribArray, GLuint, index)
+FWD3 (glDrawArrays, GLenum, mode, GLint, first, GLsizei, count)
+FWD4 (glDrawElements, GLenum, mode, GLsizei, count, GLenum, type, const GLvoid*, indices)
+FWD5 (glDrawElementsInstanced, GLenum, mode, GLsizei, count, GLenum, type, const GLvoid*, indices, GLsizei, instancecount)
+FWD1 (glEnable, GLenum, cap)
+FWD1 (glEnableVertexAttribArray, GLuint, index)
+FWD0 (glFinish)
+FWD0 (glFlush)
+FWD4 (glFramebufferRenderbuffer, GLenum, target, GLenum, attachment, GLenum, rbTarget, GLuint, renderbuffer)
+FWD5 (glFramebufferTexture2D, GLenum, target, GLenum, attachment, GLenum, textarget, GLuint, texture, GLint, level)
+FWD1 (glFrontFace, GLenum, mode)
+FWD2 (glGenBuffers, GLsizei, n, GLuint*, buffers)
+FWD1 (glGenerateMipmap, GLenum, target)
+FWD2 (glGenFramebuffers, GLsizei, n, GLuint*, framebuffers)
+FWD2 (glGenRenderbuffers, GLsizei, n, GLuint*, renderbuffers)
+FWD2 (glGenTextures, GLsizei, n, GLuint*, textures)
+FWD2 (glGenVertexArrays, GLsizei, n, GLuint*, arrays)
+FWD7 (glGetActiveAttrib, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
+FWD7 (glGetActiveUniform, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
+FWD4 (glGetAttachedShaders, GLuint, program, GLsizei, maxCount, GLsizei*, count, GLuint*, shaders)
+FWD_RET1 (glGetAttribLocation, GLint, GLuint, program, const GLchar*, name)
+FWD_RET0 (glGetError, GLenum, GLenum(GL_NO_ERROR))
+FWD2 (glGetFloatv, GLenum, pname, GLfloat*, params)
+FWD4 (glGetFramebufferAttachmentParameteriv, GLenum, target, GLenum, attachment, GLenum, pname, GLint*, params)
+FWD2 (glGetIntegerv, GLenum, pname, GLint*, params)
+FWD4 (glGetProgramInfoLog, GLuint, program, GLsizei, bufSize, GLsizei*, length, GLchar*, infoLog)
+FWD3 (glGetProgramiv, GLuint, program, GLenum, pname, GLint*, params)
+FWD3 (glGetRenderbufferParameteriv, GLenum, target, GLenum, pname, GLint*, params)
+FWD4 (glGetShaderInfoLog, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GLchar*, infoLog)
+FWD3 (glGetShaderiv, GLuint, shader, GLenum, pname, GLint*, params)
+FWD4 (glGetShaderPrecisionFormat, GLenum, shaderType, GLenum, precisionType, GLint*, range, GLint*, precision)
+FWD4 (glGetShaderSource, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GLchar*, source)
+FWD_RET1 (glGetString, const GLubyte*, GLenum, name, const GLubyte*(nullptr))
+FWD3 (glGetTexParameterfv, GLenum, target, GLenum, pname, GLfloat*, params)
+FWD3 (glGetTexParameteriv, GLenum, target, GLenum, pname, GLint*, params)
+FWD3 (glGetUniformfv, GLuint, program, GLint, location, GLfloat*, params)
+FWD3 (glGetUniformiv, GLuint, program, GLint, location, GLint*, params)
+FWD_RET1 (glGetUniformLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
+FWD3 (glGetVertexAttribfv, GLuint, index, GLenum, pname, GLfloat*, params)
+FWD3 (glGetVertexAttribiv, GLuint, index, GLenum, pname, GLint*, params)
+FWD2 (glHint, GLenum, target, GLenum, mode)
+FWD_RET1 (glIsBuffer, GLboolean, GLuint, buffer, GLboolean(0))
+FWD_RET1 (glIsEnabled, GLboolean, GLenum, cap, GLboolean(0))
+FWD_RET1 (glIsFramebuffer, GLboolean, GLuint, framebuffer, GLboolean(0))
+FWD_RET1 (glIsProgram, GLboolean, GLuint, program, GLboolean(0))
+FWD_RET1 (glIsRenderbuffer, GLboolean, GLuint, renderbuffer, GLboolean(0))
+FWD_RET1 (glIsShader, GLboolean, GLuint, shader, GLboolean(0))
+FWD_RET1 (glIsTexture, GLboolean, GLuint, texture, GLboolean(0))
+FWD_RET1 (glIsVertexArray, GLboolean, GLuint, array, GLboolean(0))
+FWD1 (glLineWidth, GLfloat, width)
+FWD1 (glLinkProgram, GLuint, program)
+FWD2 (glPixelStorei, GLenum, pname, GLint, param)
+FWD2 (glPolygonOffset, GLfloat, factor, GLfloat, units)
+FWD7 (glReadPixels, GLint, x, GLint, y, GLsizei, width, GLsizei, height, GLenum, format, GLenum, type, GLvoid*, pixels)
+FWD4 (glRenderbufferStorage, GLenum, target, GLenum, internalformat, GLsizei, width, GLsizei, height)
+FWD5 (glRenderbufferStorageMultisample, GLenum, target, GLsizei, samples, GLenum, internalformat, GLsizei, width, GLsizei, height)
+FWD2 (glSampleCoverage, GLfloat, value, GLboolean, invert)
+FWD4 (glScissor, GLint, x, GLint, y, GLsizei, width, GLsizei, height)
+FWD5 (glShaderBinary, GLsizei, n, const GLuint*, shaders, GLenum, binaryFormat, const GLvoid*, binary, GLsizei, length)
+FWD4 (glShaderSource, GLuint, shader, GLsizei, count, const GLchar* const*, str, const GLint*, length)
+FWD3 (glStencilFunc, GLenum, func, GLint, ref, GLuint, mask)
+FWD4 (glStencilFuncSeparate, GLenum, face, GLenum, func, GLint, ref, GLuint, mask)
+FWD1 (glStencilMask, GLuint, mask)
+FWD2 (glStencilMaskSeparate, GLenum, face, GLuint, mask)
+FWD3 (glStencilOp, GLenum, fail, GLenum, zfail, GLenum, zpass)
+FWD4 (glStencilOpSeparate, GLenum, face, GLenum, sfail, GLenum, dpfail, GLenum, dppass)
+FWD9 (glTexImage2D, GLenum, target, GLint, level, GLint, internalformat, GLsizei, width, GLsizei, height, GLint, border, GLenum, format, GLenum, type, const GLvoid*, pixels)
+FWD3 (glTexParameterf, GLenum, target, GLenum, pname, GLfloat, param)
+FWD3 (glTexParameterfv, GLenum, target, GLenum, pname, const GLfloat*, params)
+FWD3 (glTexParameteri, GLenum, target, GLenum, pname, GLint, param)
+FWD3 (glTexParameteriv, GLenum, target, GLenum, pname, const GLint*, params)
+FWD8 (glTexSubImage2D, GLenum, target, GLint, level, GLint, xoffset, GLint, yoffset, GLsizei, width, GLsizei, height, GLenum, format, GLenum, type, const GLvoid*, pixels)
+FWD2 (glUniform1f, GLint, location, GLfloat, v0)
+FWD3 (glUniform1fv, GLint, location, GLsizei, count, const GLfloat*, value)
+FWD2 (glUniform1i, GLint, location, GLint, v0)
+FWD3 (glUniform1iv, GLint, location, GLsizei, count, const GLint*, value)
+FWD3 (glUniform2f, GLint, location, GLfloat, v0, GLfloat, v1)
+FWD3 (glUniform2fv, GLint, location, GLsizei, count, const GLfloat*, value)
+FWD3 (glUniform2i, GLint, location, GLint, v0, GLint, v1)
+FWD3 (glUniform2iv, GLint, location, GLsizei, count, const GLint*, value)
+FWD4 (glUniform3f, GLint, location, GLfloat, v0, GLfloat, v1, GLfloat, v2)
+FWD3 (glUniform3fv, GLint, location, GLsizei, count, const GLfloat*, value)
+FWD4 (glUniform3i, GLint, location, GLint, v0, GLint, v1, GLint, v2)
+FWD3 (glUniform3iv, GLint, location, GLsizei, count, const GLint*, value)
+FWD5 (glUniform4f, GLint, location, GLfloat, v0, GLfloat, v1, GLfloat, v2, GLfloat, v3)
+FWD3 (glUniform4fv, GLint, location, GLsizei, count, const GLfloat*, value)
+FWD5 (glUniform4i, GLint, location, GLint, v0, GLint, v1, GLint, v2, GLint, v3)
+FWD3 (glUniform4iv, GLint, location, GLsizei, count, const GLint*, value)
+FWD4 (glUniformMatrix2fv, GLint, location, GLsizei, count, GLboolean, transpose, const GLfloat*, value)
+FWD4 (glUniformMatrix3fv, GLint, location, GLsizei, count, GLboolean, transpose, const GLfloat*, value)
+FWD4 (glUniformMatrix4fv, GLint, location, GLsizei, count, GLboolean, transpose, const GLfloat*, value)
+FWD1 (glUseProgram, GLuint, program)
+FWD1 (glValidateProgram, GLuint, program)
+FWD2 (glVertexAttrib1f, GLuint, index, GLfloat, v0)
+FWD2 (glVertexAttrib1fv, GLuint, index, const GLfloat*, v)
+FWD3 (glVertexAttrib2f, GLuint, index, GLfloat, v0, GLfloat, v1)
+FWD2 (glVertexAttrib2fv, GLuint, index, const GLfloat*, v)
+FWD4 (glVertexAttrib3f, GLuint, index, GLfloat, v0, GLfloat, v1, GLfloat, v2)
+FWD2 (glVertexAttrib3fv, GLuint, index, const GLfloat*, v)
+FWD5 (glVertexAttrib4f, GLuint, index, GLfloat, v0, GLfloat, v1, GLfloat, v2, GLfloat, v3)
+FWD2 (glVertexAttrib4fv, GLuint, index, const GLfloat*, v)
+FWD6 (glVertexAttribPointer, GLuint, index, GLint, size, GLenum, type, GLboolean, normalized, GLsizei, stride, const GLvoid*, pointer)
+FWD2 (glVertexAttribDivisor, GLuint, index, GLuint, divisor)
+FWD4 (glViewport, GLint, x, GLint, y, GLsizei, width, GLsizei, height)
