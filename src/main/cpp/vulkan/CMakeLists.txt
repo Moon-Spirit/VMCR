@@ -1,11 +1,13 @@
-# ===========================================================================
-# src/main/cpp/vulkan/CMakeLists.txt
-# ===========================================================================
 set(_vmcr_vulkan_src
     vmcr_probe.cpp)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+# 检测 Vulkan-Hpp 可用性 (子模块)
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/Vulkan-Hpp/vk_sdk/include/vulkan/vulkan.hpp")
+    list(APPEND _vmcr_vulkan_src vk_renderer_hpp.cpp)
+    message(STATUS "vmcr_vulkan: Vulkan-Hpp detected, building vk_renderer_hpp.cpp")
+else()
     list(APPEND _vmcr_vulkan_src vk_renderer.cpp)
+    message(STATUS "vmcr_vulkan: Vulkan-Hpp NOT found, using legacy vk_renderer.cpp")
 endif()
 
 # Android: SHARED (dlopen); 主机: STATIC (避免 .lib 缺失)
@@ -37,17 +39,25 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         VK_USE_PLATFORM_ANDROID_KHR=1)
 endif()
 
+# Vulkan-Hpp include (子模块存在时)
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/Vulkan-Hpp/vk_sdk/include")
+    target_include_directories(vmcr_vulkan PRIVATE
+        "${CMAKE_SOURCE_DIR}/third_party/Vulkan-Hpp/vk_sdk/include")
+endif()
+
+# VMA include (子模块存在时)
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/VMA/include")
+    target_include_directories(vmcr_vulkan PRIVATE
+        "${CMAKE_SOURCE_DIR}/third_party/VMA/include")
+endif()
+
+# vkbootstrap include (子模块存在时)
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/vkbootstrap/include")
+    target_include_directories(vmcr_vulkan PRIVATE
+        "${CMAKE_SOURCE_DIR}/third_party/vkbootstrap/include")
+endif()
+
 # 仅在 Android 上链接 android log
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     target_link_libraries(vmcr_vulkan PUBLIC android log)
 endif()
-
-# 隐藏内部符号
-set_target_properties(vmcr_vulkan PROPERTIES
-    C_VISIBILITY_PRESET   hidden
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON)
-
-# 暴露入口符号
-set_source_files_properties(vmcr_probe.cpp PROPERTIES
-    COMPILE_DEFINITIONS VMCR_EXPORTS=1)

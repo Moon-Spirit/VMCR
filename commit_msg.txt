@@ -1,29 +1,21 @@
-refactor: 按 MobileGlues-plugin 架构添加 FCL 插件 APK 模块
+vulkan: 添加 Vulkan-Hpp + VMA + vkbootstrap 增强版 vk_renderer
 
-参考 MobileGL-Dev/MobileGlues-plugin/app 的集成方式, 新增:
+新文件:
+- include/vmcr/vk_hpp.h: 头文件检测, 子模块缺失时自动降级到原生 Vulkan
+- src/main/cpp/vulkan/vk_renderer_hpp.cpp: Vulkan-Hpp RAII + VMA + vkbootstrap
+  的 VulkanRenderer 实现. 使用:
+  - vkb::InstanceBuilder / vkb::DeviceBuilder (vkbootstrap 简化实例/设备创建)
+  - vk::raii::Instance / Device / SurfaceKHR (Vulkan-Hpp RAII)
+  - VmaAllocator (VMA, GPU 显存自动管理, 减少手动 vkAllocateMemory)
+  - #if VMCR_HAS_VULKAN_HPP / VMCR_HAS_VMA / VMCR_HAS_VKBOOTSTRAP 守卫
 
-1. .gitmodules: 第三方依赖 (Vulkan-Hpp/VMA/vkbootstrap/glslang/SPIRV-Cross/GLM/spdlog/dobby)
-   git submodule update --init --recursive 拉取
+CMakeLists.txt 升级:
+- 检测 third_party/Vulkan-Hpp 是否存在
+  - 存在: 编译 vk_renderer_hpp.cpp (新)
+  - 不存在: 编译 vk_renderer.cpp (legacy, 已验证)
+- 添加 Vulkan-Hpp / VMA / vkbootstrap include 路径 (子模块存在时)
+- 维持向后兼容: 旧 CI (无子模块) 仍能编译
 
-2. third_party/ 目录:
-   - README.md 说明各依赖用途
-   - CMakeLists.txt 统一管理, 子模块缺失时优雅降级
-
-3. app/ FCL 插件 APK 模块 (Kotlin + AGP 8.5):
-   - AndroidManifest.xml 含 FCL 识别的 meta-data:
-     * fclPlugin=true
-     * renderer="VMCR:libGL.so:libEGL.so"
-     * boatEnv / pojavEnv (FCL/Pojav 启动器环境变量)
-     * minMCVer="1.7.10" (覆盖 GT: New Horizons 主流老版本)
-   - VMCRPluginActivity.java 占位 (NoDisplay theme)
-   - res/values/strings.xml
-   - build.gradle.kts 集成主 CMakeLists, 打包 NDK 产物
-
-4. 根 settings.gradle.kts / gradle/libs.versions.toml
-5. CMakeLists.txt v0.1.0 -> v0.2.0, 加 third_party include
-6. next_steps.md: 后续重构计划
-
-注意: 1.7.10 是 Forge 时代 (非 Fabric), JNI Mixin 拦截不生效,
-但 GLES forwarding 路径可以透明拦截 OpenGL 调用并转发.
-技术风险: 1.7.10 用 LWJGL3 (Pojav/FCL 实现), 调用 libGL.so/libEGL.so
-走的是我们的 forwarder 路径, 应当可以工作.
+后续 (子模块拉取后):
+- git submodule update --init --recursive
+- 自动切换到 Hpp 版本, 获得 RAII + VMA 自动分配
