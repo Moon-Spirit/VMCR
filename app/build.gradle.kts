@@ -27,7 +27,12 @@ android {
         versionName = "0.2.0"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // 4 个 ABI: 64/32 位 ARM + 64/32 位 Intel
+            //   arm64-v8a   : SM8635 等现代设备 (Vulkan 1.3 目标)
+            //   armeabi-v7a : 32 位 ARM (1.7.10 老设备, 旧 GLES 路径)
+            //   x86_64      : 64 位 Intel (Android Studio 模拟器)
+            //   x86         : 32 位 Intel (老 Android 模拟器)
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
         externalNativeBuild {

@@ -1,0 +1,128 @@
+# ===========================================================================
+# VMCR APK 构建工作流
+# 多 ABI: arm64-v8a / armeabi-v7a / x86_64 / x86
+# 产物: app/build/outputs/apk/release/app-release.apk (含 4 个 ABI 的 .so)
+# ===========================================================================
+name: Build APK
+
+on:
+  workflow_dispatch:                  # 手动触发
+    inputs:
+      abi_filter:
+        description: "ABI 过滤 (留空 = 全部 4 个)"
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - "arm64-v8a"
+          - "armeabi-v7a"
+          - "x86_64"
+          - "x86"
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "third_party/**"
+      - "CMakeLists.txt"
+      - ".gitmodules"
+  pull_request:
+    branches: [main]
+
+# 强制使用 Node 24, 避免 2026-09-16 后 Node 20 失效
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build-apk:
+    name: Build APK (4 ABI)
+    runs-on: ubuntu-22.04
+
+    steps:
+      # ---- 1. 拉取源码 (含子模块) -----------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      # ---- 2. JDK 17 (Gradle + AGP 8 需要) ----------------------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ---- 3. Android SDK + NDK r27d + CMake -------------------------
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          java-version: '17'
+          sdk-version: '34'
+          ndk-version: 'r27d'
+          cmake-version: '3.22.1'
+          add-cmake: true
+
+      # ---- 4. Gradle 缓存 (加速重复构建) -----------------------------
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+          cache-disabled: false
+          generate-wrapper: true
+
+      # ---- 5. 显示环境 -------------------------------------------------
+      - name: Display environment
+        run: |
+          echo "=== Android SDK ==="
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "=== NDK ==="
+          ls -la $ANDROID_HOME/ndk/ 2>/dev/null || echo "no NDK"
+          echo "=== CMake ==="
+          cmake --version
+          echo "=== Java ==="
+          java -version
+          echo "=== Gradle ==="
+          gradle --version 2>&1 | head -10
+
+      # ---- 6. 构建 APK (4 ABI 全部) ----------------------------------
+      - name: Build APK
+        working-directory: app
+        run: |
+          # 接受 workflow_dispatch 的 ABI 过滤输入
+          if [ -n "${{ inputs.abi_filter }}" ]; then
+            echo "Building only ${{ inputs.abi_filter }}"
+            ABI_FILTER="${{ inputs.abi_filter }}"
+          else
+            echo "Building all 4 ABIs"
+            ABI_FILTER="arm64-v8a,armeabi-v7a,x86_64,x86"
+          fi
+          # 直接调用 gradle (无需 wrapper, setup-gradle 已配置)
+          gradle :app:assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            -PvmcrAbiFilter="$ABI_FILTER"
+
+      # ---- 7. 校验 APK 存在 ------------------------------------------
+      - name: Verify APK output
+        run: |
+          ls -la app/build/outputs/apk/release/ 2>/dev/null || {
+            echo "::error::No APK found in expected location"
+            exit 1
+          }
+          file app/build/outputs/apk/release/*.apk
+          # 列出 APK 内的 .so 文件
+          unzip -l app/build/outputs/apk/release/*.apk | grep -E "\.so$" | head -20
+
+      # ---- 8. 上传 APK ------------------------------------------------
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VMCR-${{ github.sha }}
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
