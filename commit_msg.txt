@@ -1,23 +1,17 @@
-fix(vk_renderer): 修复 CI 编译错误 (主机构建)
+docs: 添加 FCL APK 构建说明 + GTNH 1.7.10 兼容性文档
 
-CI 错误 (commit cd373e3 后):
-1. vk_renderer.cpp:162: designator order for field
-   'VkPhysicalDeviceVulkan13Features::synchronization2' does not match
-   declaration order
+新增:
+- app/README.md: FCL 插件 APK 构建 / 安装 / 验证步骤
+- docs/GTNH_LIMITATIONS.md: 1.7.10 支持矩阵 + Phase 状态表
 
-   修复: 重新排序 designated initializers, 必须按 struct 定义顺序
-   synchronization2 在前, dynamicRendering 在后 (Vulkan 1.3 规范)
+1.7.10 (GT: New Horizons) 关键点:
+- ✅ libGL/libEGL 劫持 + GLES 3.2 转发  (主路径)
+- ✅ Vulkan 探测与设备创建 (需设备支持)
+- ⚠️ Fabric Mod 不工作 (Forge 时代, 无 Fabric Loader)
+- ⚠️ JNI chunk mesh 截取不生效
+- ⚠️ Iris 1.7.10 兼容包需要适配
 
-2. vk_renderer.cpp:234: 'VkAndroidSurfaceCreateInfoKHR' was not declared
-   原因: 主机构建 (Linux gcc 11) 没有定义 VK_USE_PLATFORM_ANDROID_KHR
-   该 struct 仅在 Vulkan android platform header 中声明
-
-   修复:
-   - VkAndroidSurfaceCreateInfoKHR/vkCreateAndroidSurfaceKHR 调用
-     用 #ifdef VK_USE_PLATFORM_ANDROID_KHR 守卫
-   - 主机路径保持 surface = VK_NULL_HANDLE, swapchain_ready_ = false
-   - 删除重复的旧代码块 (我的 edit 没替换, 只在前面添加了 ifdef)
-
-验证:
-- Windows 主机: cmake -G Ninja -- 21 个 target 全部 OK
-- Android NDK 30 (本地): libGL.so 1.7MB, libEGL.so 175KB -- OK
+部署建议:
+1. FCL 启动器中选 VMCR 启动一次 (解压 LWJGL3)
+2. 再进 GTNH
+3. 出问题切回默认 GLES 渲染器
