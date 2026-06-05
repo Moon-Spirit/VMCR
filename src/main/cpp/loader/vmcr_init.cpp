@@ -115,16 +115,19 @@ void vmcr_loader_ctor() {
         (int)getpid(), (int)gettid());
     std::fflush(stderr);
 
-    // 3. 写 marker 文件 - 用户可以 adb pull /sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_loaded
+    // 3. 写 marker 文件 - 用户可以 adb pull
+    // /data/local/tmp/ 最可靠 (系统目录, 通常可写)
     const char* paths[] = {
-        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_loaded",
         "/data/local/tmp/vmcr_loaded",
+        "/data/local/tmp/vmcr_loaded.txt",
+        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_loaded",
         "/data/data/io.anomalyco.vmcr/files/vmcr_loaded",
     };
     for (const char* p : paths) {
         FILE* f = std::fopen(p, "w");
         if (f) {
-            std::fprintf(f, "VMCR libGL.so loaded\npid=%d\ntid=%d\n", (int)getpid(), (int)gettid());
+            std::fprintf(f, "VMCR libGL.so loaded\npid=%d\ntid=%d\n",
+                         (int)getpid(), (int)gettid());
             std::fclose(f);
         }
     }

@@ -12,8 +12,55 @@
 
 #include <cstring>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <dlfcn.h>
+#include <unistd.h>
+
+// ---- libEGL.so 构造器: FCL 的 EGLBridge 加载 libEGL.so 时触发 ----
+extern "C" __attribute__((constructor))
+void vmcr_egl_ctor() {
+    const int pid = (int)getpid();
+    const int tid = (int)gettid();
+
+    // logcat 一定可见
+    LOG_I(vmcr::log::kTagCore, "===========================================");
+    LOG_I(vmcr::log::kTagCore, "  VMCR libEGL.so CONSTRUCTOR (pid=%d tid=%d)", pid, tid);
+    LOG_I(vmcr::log::kTagCore, "===========================================");
+
+    // stderr
+    std::fprintf(stderr, "[VMCR-EGL] libEGL.so CONSTRUCTOR pid=%d tid=%d\n", pid, tid);
+    std::fflush(stderr);
+
+    // 多路径写文件, 至少 /data/local/tmp 通常可写
+    const char* paths[] = {
+        "/data/local/tmp/vmcr_egl_loaded",
+        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_egl_loaded",
+        "/data/data/io.anomalyco.vmcr/files/vmcr_egl_loaded",
+    };
+    for (const char* p : paths) {
+        FILE* f = std::fopen(p, "w");
+        if (f) {
+            std::fprintf(f, "VMCR libEGL.so loaded\npid=%d\ntid=%d\n", pid, tid);
+            std::fclose(f);
+        }
+    }
+}
+
+// ---- libEGL.so 析构器 ----
+extern "C" __attribute__((destructor))
+void vmcr_egl_dtor() {
+    LOG_I(vmcr::log::kTagCore, "VMCR libEGL.so DESTRUCTOR (process exit)");
+
+    const char* paths[] = {
+        "/data/local/tmp/vmcr_egl_diag",
+        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_egl_diag",
+    };
+    for (const char* p : paths) {
+        FILE* f = std::fopen(p, "w");
+        if (f) { std::fprintf(f, "VMCR libEGL.so exited\n"); std::fclose(f); }
+    }
+}
 
 extern "C" {
 
