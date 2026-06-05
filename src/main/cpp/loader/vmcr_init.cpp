@@ -99,11 +99,35 @@ vmcr::RendererTier parse_prop_force_tier() noexcept {
 extern "C" __attribute__((constructor))
 void vmcr_loader_ctor() {
     g_count_libGL_loaded.fetch_add(1, std::memory_order_relaxed);
+
+    // 1. Android logcat (FCL 日志可能不抓 stderr, 但 logcat 一定能看到)
+    LOG_I(kTag, "===========================================");
+    LOG_I(kTag, "  VMCR libGL.so CONSTRUCTOR (pid=%d tid=%d)",
+          (int)getpid(), (int)gettid());
+    LOG_I(kTag, "  Path: %s", (std::strlen("/data/app/io.anomalyco.vmcr") > 0)
+          ? "loaded" : "?");
+    LOG_I(kTag, "  -- this .so IS in this process, ready to be called --");
+    LOG_I(kTag, "===========================================");
+
+    // 2. stderr (C runtime) - FCL 启动子进程时可能转发
     std::fprintf(stderr,
-        "[VMCR-GL] libGL.so CONSTRUCTOR (pid=%d, tid=%d) -- shim is now in this process\n",
+        "[VMCR-GL] libGL.so CONSTRUCTOR pid=%d tid=%d\n",
         (int)getpid(), (int)gettid());
     std::fflush(stderr);
-    LOG_I(kTag, "VMCR libGL.so constructor fired (pid=%d)", (int)getpid());
+
+    // 3. 写 marker 文件 - 用户可以 adb pull /sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_loaded
+    const char* paths[] = {
+        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_loaded",
+        "/data/local/tmp/vmcr_loaded",
+        "/data/data/io.anomalyco.vmcr/files/vmcr_loaded",
+    };
+    for (const char* p : paths) {
+        FILE* f = std::fopen(p, "w");
+        if (f) {
+            std::fprintf(f, "VMCR libGL.so loaded\npid=%d\ntid=%d\n", (int)getpid(), (int)gettid());
+            std::fclose(f);
+        }
+    }
 }
 
 // ---- JNI_OnLoad: System.loadLibrary 路径 ---------------------------------
@@ -155,9 +179,50 @@ extern "C" JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* /*vm*/, void* /*reserved*
 // libGL.so 进程退出时再 dump 一次 (覆盖 dlclose 不调用的场景)
 extern "C" __attribute__((destructor))
 void vmcr_loader_dtor() {
+    auto integerv = g_count_glGetIntegerv.load();
+    auto string   = g_count_glGetString.load();
+    auto stringi  = g_count_glGetStringi.load();
+    auto loaded   = g_count_libGL_loaded.load();
+
+    LOG_I(kTag, "===========================================");
+    LOG_I(kTag, "  VMCR libGL.so DESTRUCTOR (process exit)");
+    LOG_I(kTag, "  glGetIntegerv calls: %llu", (unsigned long long)integerv);
+    LOG_I(kTag, "  glGetString   calls: %llu", (unsigned long long)string);
+    LOG_I(kTag, "  glGetStringi  calls: %llu", (unsigned long long)stringi);
+    LOG_I(kTag, "  Constructor  fires:  %llu", (unsigned long long)loaded);
+    if (integerv == 0 && string == 0 && stringi == 0) {
+        LOG_E(kTag, "  ** SHIM WAS NEVER CALLED - LWJGL3 uses vendor's libGLESv2.so **");
+    } else {
+        LOG_I(kTag, "  ** shim was used (calls > 0) **");
+    }
+    LOG_I(kTag, "===========================================");
+
     dump_counters("DESTRUCTOR (process exit)");
     std::fprintf(stderr,
-        "[VMCR-GL] libGL.so was loaded %llu times during process lifetime\n",
-        (unsigned long long)g_count_libGL_loaded.load());
+        "[VMCR-GL] DESTRUCTOR: glGetIntegerv=%llu glGetString=%llu glGetStringi=%llu loaded=%llu\n",
+        (unsigned long long)integerv, (unsigned long long)string,
+        (unsigned long long)stringi, (unsigned long long)loaded);
     std::fflush(stderr);
+
+    // 写文件让用户能读
+    const char* paths[] = {
+        "/sdcard/Android/data/io.anomalyco.vmcr/files/vmcr_diag",
+        "/data/local/tmp/vmcr_diag",
+    };
+    for (const char* p : paths) {
+        FILE* f = std::fopen(p, "w");
+        if (f) {
+            std::fprintf(f,
+                "glGetIntegerv=%llu\n"
+                "glGetString=%llu\n"
+                "glGetStringi=%llu\n"
+                "libGL_loaded=%llu\n"
+                "%s\n",
+                (unsigned long long)integerv, (unsigned long long)string,
+                (unsigned long long)stringi, (unsigned long long)loaded,
+                (integerv == 0 && string == 0 && stringi == 0) ?
+                "VERDICT: SHIM BYPASSED" : "VERDICT: shim is used");
+            std::fclose(f);
+        }
+    }
 }
