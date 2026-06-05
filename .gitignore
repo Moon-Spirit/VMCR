@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# VMCR .gitignore
+# ---------------------------------------------------------------------------
+
+# --- Build 输出 -----------------------------------------------------------
+build/
+out/
+dist/
+*.fmodpack
+
+# --- CMake / Ninja --------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+build.ninja
+.ninja_log
+.ninja_deps
+compile_commands.json
+CMakeUserPresets.json
+
+# --- NDK / Android NDK 产物 ----------------------------------------------
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.exp
+*.lib
+*.pdb
+*.ilk
+*.aps
+*.pch
+*.idb
+*.ipdb
+*.so.bak
+
+# --- SPIR-V 编译产物 (源码在 src/shaders, .spv 不入库) ------------------
+*.spv
+!src/shaders/.gitkeep
+
+# --- Vulkan SDK / RenderDoc ----------------------------------------------
+*.vkdx
+
+# --- Android Studio / IntelliJ -------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.gradle/
+local.properties
+captures/
+.cxx/
+.externalNativeBuild/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# --- Java / Gradle / Fabric -----------------------------------------------
+hs_err_pid*
+replay_pid*
+.classpath
+.project
+.settings/
+build/
+bin/
+
+# --- Visual Studio / VSCode -----------------------------------------------
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# --- macOS / Windows 临时文件 --------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+$RECYCLE.BIN/
+
+# --- 日志 / 抓取 ----------------------------------------------------------
+*.log
+crash-*.dmp
+vmcr_crash_*.log
+vmcr_profile_*.csv
+vk_pipeline.cache
+
+# --- Editor 临时文件 ------------------------------------------------------
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# --- 敏感信息 (绝不提交) --------------------------------------------------
+keystore.jks
+*.keystore
+secrets.properties
+.env
+.env.local
