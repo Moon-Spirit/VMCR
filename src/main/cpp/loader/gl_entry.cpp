@@ -6,9 +6,8 @@
 // 符号可见性: 全部 visibility default, 否则 MC System.loadLibrary("GL")
 //             找不到这些符号.
 //
-// 策略: 每个 GL 入口手动 inline 写出, 转发到 vendor.
-// 原因: 宏展开在 NDK clang 下产生 token 解析问题 (extern "C" + attribute +
-//       function name + params 的组合). 直接 inline 简单可靠.
+// 关键: 入口必须放在文件作用域, 不能在 namespace 内, 否则 extern "C"
+//       会被 namespace 覆盖, dlsym 找不到符号.
 // ===========================================================================
 #include "vmcr/log.h"
 #include "vmcr/vendor_gl.h"
@@ -16,89 +15,90 @@
 
 #include <cstring>
 
-namespace {
-
-inline void forward_gl(const char* name) {
+// =====================================================================
+// 辅助函数: 打印转发日志 (TRACE 级别, 默认不开启)
+// =====================================================================
+static inline void vmcr_forward_log(const char* name) {
     LOG_V(log::kTagGL, "forward: %s", name);
 }
 
+// =====================================================================
+// 宏: FWD0..FWD9 (无返回值), FWD_RET0..FWD_RET2 (有返回值)
+// =====================================================================
 #define FWD0(name) \
     extern "C" VMCR_EXPORT void name() { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(); \
     }
 
 #define FWD1(name, T1, p1) \
     extern "C" VMCR_EXPORT void name(T1 p1) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1); \
     }
 
 #define FWD2(name, T1, p1, T2, p2) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2); \
     }
 
 #define FWD3(name, T1, p1, T2, p2, T3, p3) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3); \
     }
 
 #define FWD4(name, T1, p1, T2, p2, T3, p3, T4, p4) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4); \
     }
 
 #define FWD5(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4, p5); \
     }
 
 #define FWD6(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4, p5, p6); \
     }
 
 #define FWD7(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7); \
     }
 
 #define FWD8(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7, T8, p8) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7, T8 p8) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8); \
     }
 
 #define FWD9(name, T1, p1, T2, p2, T3, p3, T4, p4, T5, p5, T6, p6, T7, p7, T8, p8, T9, p9) \
     extern "C" VMCR_EXPORT void name(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5, T6 p6, T7 p7, T8 p8, T9 p9) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) t.name(p1, p2, p3, p4, p5, p6, p7, p8, p9); \
     }
 
-// RET 宏: 返回值版本. 签名: FWD_RETN(name, ret, ret_init, N, ...)
-//   N = 参数个数 (匹配 FWD0..FWD9)
-//   参数列表展开 (T1, p1, T2, p2, ...)
-//   ret_init = 失败时返回的默认值
+// 有返回值的版本
 #define FWD_RET0(name, ret, ret_init) \
     extern "C" VMCR_EXPORT ret name() { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) return t.name(); \
         return ret_init; \
@@ -106,7 +106,7 @@ inline void forward_gl(const char* name) {
 
 #define FWD_RET1(name, ret, T1, p1, ret_init) \
     extern "C" VMCR_EXPORT ret name(T1 p1) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) return t.name(p1); \
         return ret_init; \
@@ -114,16 +114,15 @@ inline void forward_gl(const char* name) {
 
 #define FWD_RET2(name, ret, T1, p1, T2, p2, ret_init) \
     extern "C" VMCR_EXPORT ret name(T1 p1, T2 p2) { \
-        forward_gl(#name); \
+        vmcr_forward_log(#name); \
         auto& t = vmcr::vendor::gl(); \
         if (t.name) return t.name(p1, p2); \
         return ret_init; \
     }
 
-}  // namespace
-
 // =====================================================================
 // 全部 GLES 3.2 入口 (Phase 0/1: forward 到 vendor)
+// 必须在文件作用域, extern "C" 才能被 dlsym 找到
 // =====================================================================
 
 FWD1 (glActiveTexture, GLenum, texture)
@@ -183,7 +182,7 @@ FWD7 (glGetActiveAttrib, GLuint, program, GLuint, index, GLsizei, bufSize, GLsiz
 FWD7 (glGetActiveUniform, GLuint, program, GLuint, index, GLsizei, bufSize, GLsizei*, length, GLint*, size, GLenum*, type, GLchar*, name)
 FWD4 (glGetAttachedShaders, GLuint, program, GLsizei, maxCount, GLsizei*, count, GLuint*, shaders)
 FWD_RET2 (glGetAttribLocation, GLint, GLuint, program, const GLchar*, name, GLint(-1))
-FWD_RET0 (glGetError, GLenum, GLenum(GL_NO_ERROR))
+FWD_RET0 (glGetError, GLenum, 0)
 FWD2 (glGetFloatv, GLenum, pname, GLfloat*, params)
 FWD4 (glGetFramebufferAttachmentParameteriv, GLenum, target, GLenum, attachment, GLenum, pname, GLint*, params)
 FWD2 (glGetIntegerv, GLenum, pname, GLint*, params)
@@ -194,7 +193,7 @@ FWD4 (glGetShaderInfoLog, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GL
 FWD3 (glGetShaderiv, GLuint, shader, GLenum, pname, GLint*, params)
 FWD4 (glGetShaderPrecisionFormat, GLenum, shaderType, GLenum, precisionType, GLint*, range, GLint*, precision)
 FWD4 (glGetShaderSource, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GLchar*, source)
-FWD_RET1 (glGetString, const GLubyte*, GLenum, name, const GLubyte*(nullptr))
+FWD_RET1 (glGetString, const GLubyte*, GLenum, name, nullptr)
 FWD3 (glGetTexParameterfv, GLenum, target, GLenum, pname, GLfloat*, params)
 FWD3 (glGetTexParameteriv, GLenum, target, GLenum, pname, GLint*, params)
 FWD3 (glGetUniformfv, GLuint, program, GLint, location, GLfloat*, params)
@@ -203,14 +202,14 @@ FWD_RET2 (glGetUniformLocation, GLint, GLuint, program, const GLchar*, name, GLi
 FWD3 (glGetVertexAttribfv, GLuint, index, GLenum, pname, GLfloat*, params)
 FWD3 (glGetVertexAttribiv, GLuint, index, GLenum, pname, GLint*, params)
 FWD2 (glHint, GLenum, target, GLenum, mode)
-FWD_RET1 (glIsBuffer, GLboolean, GLuint, buffer, GLboolean(0))
-FWD_RET1 (glIsEnabled, GLboolean, GLenum, cap, GLboolean(0))
-FWD_RET1 (glIsFramebuffer, GLboolean, GLuint, framebuffer, GLboolean(0))
-FWD_RET1 (glIsProgram, GLboolean, GLuint, program, GLboolean(0))
-FWD_RET1 (glIsRenderbuffer, GLboolean, GLuint, renderbuffer, GLboolean(0))
-FWD_RET1 (glIsShader, GLboolean, GLuint, shader, GLboolean(0))
-FWD_RET1 (glIsTexture, GLboolean, GLuint, texture, GLboolean(0))
-FWD_RET1 (glIsVertexArray, GLboolean, GLuint, array, GLboolean(0))
+FWD_RET1 (glIsBuffer, GLboolean, GLuint, buffer, 0)
+FWD_RET1 (glIsEnabled, GLboolean, GLenum, cap, 0)
+FWD_RET1 (glIsFramebuffer, GLboolean, GLuint, framebuffer, 0)
+FWD_RET1 (glIsProgram, GLboolean, GLuint, program, 0)
+FWD_RET1 (glIsRenderbuffer, GLboolean, GLuint, renderbuffer, 0)
+FWD_RET1 (glIsShader, GLboolean, GLuint, shader, 0)
+FWD_RET1 (glIsTexture, GLboolean, GLuint, texture, 0)
+FWD_RET1 (glIsVertexArray, GLboolean, GLuint, array, 0)
 FWD1 (glLineWidth, GLfloat, width)
 FWD1 (glLinkProgram, GLuint, program)
 FWD2 (glPixelStorei, GLenum, pname, GLint, param)

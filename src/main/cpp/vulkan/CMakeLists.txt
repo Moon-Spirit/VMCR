@@ -31,6 +31,12 @@ else()
     endif()
 endif()
 
+# Vulkan 平台宏 (Android 必须)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_compile_definitions(vmcr_vulkan PRIVATE
+        VK_USE_PLATFORM_ANDROID_KHR=1)
+endif()
+
 # 仅在 Android 上链接 android log
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     target_link_libraries(vmcr_vulkan PUBLIC android log)

@@ -1,0 +1,14 @@
+loader+vulkan: 修复 GL 入口作用域 + Vulkan Android 平台宏
+
+1. gl_entry.cpp 把宏和入口都放在匿名 namespace 内,
+   导致 extern \"C\" 被 namespace 覆盖, 符号名为 namespace::glClear,
+   而不是 glClear. dlsym 找不到, MC 加载 libGL.so 会失败.
+
+   修复: 全部移到文件作用域.
+
+2. vk_probe.cpp / vk_renderer.cpp 报 VkAndroidSurfaceCreateInfoKHR
+   未定义. 原因是 NDK 的 vulkan_android.h 需要 VK_USE_PLATFORM_ANDROID_KHR
+   宏才启用. 修复:
+   - src/main/cpp/vulkan/CMakeLists.txt: 加 target_compile_definitions
+     VK_USE_PLATFORM_ANDROID_KHR=1
+   - vmcr_probe.cpp: 显式 #include <vulkan/vulkan_android.h>

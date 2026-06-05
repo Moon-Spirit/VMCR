@@ -15,6 +15,10 @@
 
 #include <vulkan/vulkan.h>
 
+#ifdef __ANDROID__
+#include <vulkan/vulkan_android.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cstdio>
