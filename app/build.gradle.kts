@@ -1,38 +1,37 @@
-// ===========================================================================
-// FCL 插件 build.gradle.kts
-// 用 Android Gradle Plugin 8.x 打包 APK, lib/ 目录含:
-//   - libGL.so           (VMCR 主入口)
-//   - libEGL.so          (VMCR EGL 入口)
-//   - libvmcr_vk.so      (Vulkan 后端, dlopen)
-//   - libvmcr_gles.so    (GLES 后端, dlopen)
-//   - libvmcr_jni.so     (JNI 桥, dlopen)
+﻿// ===========================================================================
+// FCL 鎻掍欢 build.gradle.kts
+// 鐢?Android Gradle Plugin 8.x 鎵撳寘 APK, lib/ 鐩綍鍚?
+//   - libGL.so           (VMCR 涓诲叆鍙?
+//   - libEGL.so          (VMCR EGL 鍏ュ彛)
+//   - libvmcr_vk.so      (Vulkan 鍚庣, dlopen)
+//   - libvmcr_gles.so    (GLES 鍚庣, dlopen)
+//   - libvmcr_jni.so     (JNI 妗? dlopen)
 //
-// 编译流程: Gradle 触发 cmake (CMakeLists.txt) 编译 .so,
-// 然后打入 APK 的 lib/<abi>/ 目录.
+// 缂栬瘧娴佺▼: Gradle 瑙﹀彂 cmake (CMakeLists.txt) 缂栬瘧 .so,
+// 鐒跺悗鎵撳叆 APK 鐨?lib/<abi>/ 鐩綍.
 // ===========================================================================
 plugins {
     alias(libs.plugins.android.application)
 }
 
 android {
-    namespace = "io.anomalyco.vmcr"
+    namespace = "com.mio.plugin.renderer.vmcr"
     compileSdk = 34
-    // 使用系统已安装的 NDK (CI: 27.3.13750724 / 本地: 30.0.14904198)
-    // 不指定具体版本, AGP 自动选已安装的最新
-
+    // 浣跨敤绯荤粺宸插畨瑁呯殑 NDK (CI: 27.3.13750724 / 鏈湴: 30.0.14904198)
+    // 涓嶆寚瀹氬叿浣撶増鏈? AGP 鑷姩閫夊凡瀹夎鐨勬渶鏂?
     defaultConfig {
-        applicationId = "io.anomalyco.vmcr"
-        minSdk = 26              // Android 8.0 (匹配 FCL 最低要求)
+        applicationId = "com.mio.plugin.renderer.vmcr"
+        minSdk = 26              // Android 8.0 (鍖归厤 FCL 鏈€浣庤姹?
         targetSdk = 34
-        versionCode = 200
-        versionName = "0.2.0"
+        versionCode = 201
+        versionName = "0.2.1"
 
         ndk {
-            // 4 个 ABI: 64/32 位 ARM + 64/32 位 Intel
-            //   arm64-v8a   : SM8635 等现代设备 (Vulkan 1.3 目标)
-            //   armeabi-v7a : 32 位 ARM (1.7.10 老设备, 旧 GLES 路径)
-            //   x86_64      : 64 位 Intel (Android Studio 模拟器)
-            //   x86         : 32 位 Intel (老 Android 模拟器)
+            // 4 涓?ABI: 64/32 浣?ARM + 64/32 浣?Intel
+            //   arm64-v8a   : SM8635 绛夌幇浠ｈ澶?(Vulkan 1.3 鐩爣)
+            //   armeabi-v7a : 32 浣?ARM (1.7.10 鑰佽澶? 鏃?GLES 璺緞)
+            //   x86_64      : 64 浣?Intel (Android Studio 妯℃嫙鍣?
+            //   x86         : 32 浣?Intel (鑰?Android 妯℃嫙鍣?
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
@@ -57,7 +56,7 @@ android {
     }
 
     signingConfigs {
-        // 调试签名 (生产签名由 CI 配置)
+        // 璋冭瘯绛惧悕 (鐢熶骇绛惧悕鐢?CI 閰嶇疆)
         getByName("debug") {
             storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
         }
@@ -65,15 +64,14 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false   // 暂时关闭 R8, 避免混淆 native 符号
+            isMinifyEnabled = false   // 鏆傛椂鍏抽棴 R8, 閬垮厤娣锋穯 native 绗﹀彿
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 
     externalNativeBuild {
         cmake {
-            // build.gradle.kts 在 app/, CMakeLists.txt 在 VMCR 根目录
-            // 用 ../ 即可 (gradle 以 build.gradle.kts 所在目录为基准)
+            // build.gradle.kts 鍦?app/, CMakeLists.txt 鍦?VMCR 鏍圭洰褰?            // 鐢?../ 鍗冲彲 (gradle 浠?build.gradle.kts 鎵€鍦ㄧ洰褰曚负鍩哄噯)
             path = file("../CMakeLists.txt")
             version = "3.22.1"
         }
@@ -97,5 +95,9 @@ android {
 }
 
 dependencies {
-    // 仅用 Android SDK 标准库, 无第三方依赖
+    // 浠呯敤 Android SDK 鏍囧噯搴? 鏃犵涓夋柟渚濊禆
 }
+
+
+
+

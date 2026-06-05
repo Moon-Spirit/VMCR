@@ -24,7 +24,7 @@
 
         <!-- 空 Activity: FCL 只需识别 APK, 不需要 UI -->
         <activity
-            android:name=".VMCRPluginActivity"
+            android:name="com.mio.plugin.renderer.vmcr.VMCRPluginActivity"
             android:exported="true"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
