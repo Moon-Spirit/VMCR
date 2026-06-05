@@ -6,6 +6,7 @@
 option(VMCR_ENABLE_VULKAN          "Build Vulkan backend"                 ON)
 option(VMCR_ENABLE_GLES            "Build GLES 3.2 fallback backend"      ON)
 option(VMCR_ENABLE_JNI             "Build JNI bridge"                     ON)
+option(VMCR_ENABLE_LOADER          "Build libGL.so / libEGL.so loader"    ON)
 option(VMCR_ENABLE_UNIT_TEST       "Build host unit tests"                OFF)
 option(VMCR_ENABLE_VERBOSE         "Verbose logging"                      OFF)
 option(VMCR_ENABLE_ASAN            "AddressSanitizer"                     OFF)
@@ -17,6 +18,13 @@ option(VMCR_ENABLE_DESC_BUFFER     "Use VK_EXT_descriptor_buffer"         ON)
 option(VMCR_ENABLE_DRAW_INDIRECT   "Use VK_KHR_draw_indirect_count"        ON)
 option(VMCR_USE_VMA                "Use VulkanMemoryAllocator"            ON)
 option(VMCR_ENABLE_PIPELINE_CACHE  "Use persistent pipeline cache"        ON)
+
+# 主机侧构建时关闭 Android-only 依赖
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(VMCR_ENABLE_LOADER OFF CACHE BOOL "Build loader" FORCE)
+    set(VMCR_ENABLE_JNI    OFF CACHE BOOL "Build JNI"    FORCE)
+    set(VMCR_ENABLE_NEON   OFF CACHE BOOL "NEON"         FORCE)
+endif()
 
 # ---- 渲染档位 ------------------------------------------------------------
 set(VMCR_RENDER_TIER "auto"

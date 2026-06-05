@@ -48,7 +48,9 @@ if(VMCR_ENABLE_GLES)
     add_subdirectory(src/main/cpp/gles)
 endif()
 
-add_subdirectory(src/main/cpp/loader)
+if(VMCR_ENABLE_LOADER)
+    add_subdirectory(src/main/cpp/loader)
+endif()
 add_subdirectory(src/main/cpp/platform)
 
 if(VMCR_ENABLE_JNI)

@@ -1,8 +1,10 @@
 // ===========================================================================
 // src/main/cpp/platform/CMakeLists.txt
 // ===========================================================================
-add_library(vmcr_platform STATIC
-    android_logger.cpp)
-
-target_compile_features(vmcr_platform PUBLIC cxx_std_20)
-target_link_libraries(vmcr_platform PUBLIC log)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(vmcr_platform STATIC
+        android_logger.cpp)
+    target_link_libraries(vmcr_platform PUBLIC log)
+else()
+    add_library(vmcr_platform INTERFACE)  # 空, 主机构建跳过
+endif()

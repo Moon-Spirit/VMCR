@@ -1,0 +1,96 @@
+# ===========================================================================
+# VMCR GitHub Actions - CI
+# 触发: push / pull_request
+# 内容: 主机侧编译 + 单元测试 (不需要 NDK, 仅验证 Vulkan/GLES 主机构建)
+# ===========================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1. 主机侧编译 (无 NDK) - 验证代码可编译
+  # ---------------------------------------------------------------------
+  host-build:
+    name: Host Build & Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build \
+            libvulkan-dev mesa-vulkan-drivers \
+            glslang-tools spirv-tools \
+            xvfb
+
+      - name: Configure
+        run: |
+          cmake -G Ninja -S . -B build/host \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DVMCR_PLATFORM=Host \
+            -DVMCR_ENABLE_UNIT_TEST=ON \
+            -DVMCR_ENABLE_LOADER=OFF
+
+      - name: Build
+        run: cmake --build build/host --parallel
+
+      - name: Test
+        run: |
+          cd build/host
+          ctest --output-on-failure
+
+  # ---------------------------------------------------------------------
+  # 2. NDK 交叉编译 (arm64-v8a) - 验证 Android 端编译
+  # ---------------------------------------------------------------------
+  android-build:
+    name: Android NDK Build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Setup NDK r27
+        uses: android-actions/setup-ndk@v4
+        with: { ndk-version: r27 }
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y glslang-tools spirv-tools ninja-build
+
+      - name: Configure
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.path }}/android-ndk-r27
+        run: |
+          cmake -G Ninja -S . -B build/arm64 \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-ndk-aarch64.cmake \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DANDROID_ABI=arm64-v8a \
+            -DVMCR_RENDER_TIER=auto
+
+      - name: Build
+        run: cmake --build build/arm64 --parallel
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out/arm64-v8a
+          find build/arm64 -name "*.so" -exec cp {} out/arm64-v8a/ \;
+          ls -la out/arm64-v8a/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmcr-arm64-v8a
+          path: out/arm64-v8a/
+          if-no-files-found: warn
