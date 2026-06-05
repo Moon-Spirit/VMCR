@@ -5,6 +5,8 @@
 #include "vmcr/backend.h"
 #include "vmcr/log.h"
 
+#include <cstring>
+
 namespace vmcr {
 
 const char* tier_to_string(RendererTier t) noexcept {
