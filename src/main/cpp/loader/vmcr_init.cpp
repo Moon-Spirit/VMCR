@@ -4,6 +4,7 @@
 // ===========================================================================
 #include "vmcr/log.h"
 #include "vmcr/backend.h"
+#include "vmcr/backend_router.h"
 #include "vmcr/vendor_gl.h"
 #include "vmcr/vendor_egl.h"
 
@@ -70,16 +71,17 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /*reserved*/) {
         return JNI_ERR;
     }
 
-    // 3. 后端注册 (Phase 0 仅做探测, 不真正接管渲染)
-    // - vk backend 在 Phase 2 启用
-    // - gles backend 在 Phase 1 启用
-    LOG_I(kTag, "VMCR ready (GLES32 forwarder mode for Phase 0/1)");
+    // 3. 初始化 BackendRouter (auto 探测 + 加载后端)
+    if (!vmcr::BackendRouter::instance().initialize(forced)) {
+        LOG_W(kTag, "BackendRouter init failed, GLES forwarder will still work");
+    }
 
-    LOG_I(kTag, "  [BOOT] libGL.so loaded, forwarding to vendor");
+    LOG_I(kTag, "  [BOOT] libGL.so loaded, tier=%s", vmcr::BackendRouter::instance().tier_name());
     return JNI_VERSION_1_6;
 }
 
 extern "C" JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* /*vm*/, void* /*reserved*/) {
     LOG_I(kTag, "VMCR unloading");
+    vmcr::BackendRouter::instance().shutdown();
     vmcr::vendor::unload_vendor();
 }
