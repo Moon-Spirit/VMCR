@@ -15,16 +15,17 @@ plugins {
 }
 
 android {
-    namespace = "com.mio.plugin.renderer.vmcr"
+    namespace = "com.mio.plugin.renderer"
     compileSdk = 34
-    // 浣跨敤绯荤粺宸插畨瑁呯殑 NDK (CI: 27.3.13750724 / 鏈湴: 30.0.14904198)
-    // 涓嶆寚瀹氬叿浣撶増鏈? AGP 鑷姩閫夊凡瀹夎鐨勬渶鏂?
+    // 使用系统已安装的 NDK (CI: 27.3.13750724 / 本地: 30.0.14904198)
+    // 不指定具体版�? AGP 自动选已安装的最�?
     defaultConfig {
-        applicationId = "com.mio.plugin.renderer.vmcr"
-        minSdk = 26              // Android 8.0 (鍖归厤 FCL 鏈€浣庤姹?
+        applicationId = "com.mio.plugin.renderer"
+        applicationIdSuffix = ".vmcr"
+        minSdk = 26              // Android 8.0 (匹配 FCL 最低要�?
         targetSdk = 34
-        versionCode = 201
-        versionName = "0.2.1"
+        versionCode = 202
+        versionName = "0.2.2"
 
         ndk {
             // 4 涓?ABI: 64/32 浣?ARM + 64/32 浣?Intel

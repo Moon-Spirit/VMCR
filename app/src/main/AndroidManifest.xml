@@ -1,30 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FCL 插件 AndroidManifest.xml
+  VMCR — FCL 渲染器插件 (AndroidManifest)
 
-  FCL 启动器扫描已安装应用的此 meta-data 来识别渲染器:
-    fclPlugin = true     -> FCL 插件
-    renderer  = "Name:libGL:libEGL"  -> 渲染器标识
-    boatEnv / pojavEnv  -> FCL / Pojav 启动器环境变量
-    minMCVer / maxMCVer  -> MC 版本限制
+  严格按官方模板 https://github.com/ShirosakiMio/FCLRendererPlugin 的格式:
+  - namespace = "com.mio.plugin.renderer" (基础)
+  - applicationIdSuffix = ".vmcr" (标识我们的插件)
+  - MainActivity 相对 namespace 解析
 
-  参考: MobileGlues-plugin/app/src/main/AndroidManifest.xml
+  FCL 扫描 com.mio.plugin.renderer.* 命名的应用, 读 meta-data,
+  提取 lib/<abi>/libGL.so 等到临时目录, dlopen 加载.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <!-- FCL 需要的权限 -->
-    <uses-permission android:name="android.permission.INTERNET" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:label="@string/app_name"
         android:allowBackup="true"
+        android:extractNativeLibs="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.NoDisplay">
 
-        <!-- 空 Activity: FCL 只需识别 APK, 不需要 UI -->
+        <!-- 占位 Activity: FCL 扫描 LAUNCHER 分类发现插件 -->
         <activity
-            android:name="com.mio.plugin.renderer.vmcr.VMCRPluginActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
@@ -33,7 +30,6 @@
             </intent-filter>
         </activity>
 
-        <!-- FCL 插件标记 -->
         <meta-data
             android:name="fclPlugin"
             android:value="true" />
@@ -42,8 +38,7 @@
             android:name="des"
             android:value="@string/description" />
 
-        <!-- 渲染器标识: "Name:libGL:libEGL" 格式
-             FCL 加载 lib/ 目录下的 libGL.so 和 libEGL.so -->
+        <!-- 渲染器标识: 名称:libGL:libEGL -->
         <meta-data
             android:name="renderer"
             android:value="VMCR:libGL.so:libEGL.so" />
@@ -58,15 +53,10 @@
             android:name="pojavEnv"
             android:value="LIBGL_ES=3:POJAV_RENDERER=opengles3:POJAVEXEC_EGL=libEGL.so" />
 
-        <!-- 支持的 MC 版本: 1.7.10 起 (覆盖 GT: New Horizons 主流老版本)
-             1.7.10 用 LWJGL3 (Pojav/FCL 实现), OpenGL 调用经 libGL.so 转发.
-             1.16.5+ / 1.17 / 1.18 / 1.19 / 1.20 / 1.21+ 均支持.
-             注: 1.7.10 用 Forge 而非 Fabric, JNI Mixin 拦截仅在 1.16.5+ 生效;
-                  1.7.10 仅走 GLES forwarding 路径, 无 chunk mesh 截取. -->
+        <!-- 最低支持 MC 版本: 1.7.10 (覆盖 GTNH 主流老版本) -->
         <meta-data
             android:name="minMCVer"
             android:value="1.7.10" />
-        <!-- 不设 maxMCVer, 留空支持所有后续版本 -->
     </application>
 
 </manifest>
