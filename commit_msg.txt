@@ -1,27 +1,24 @@
-build(ci): 添加 Build APK 工作流 (4 ABI)
+build: 修复本地 APK 构建 (4 ABI, 2.68 MB)
 
-新增 .github/workflows/build-apk.yml:
-- 触发: 手动 (workflow_dispatch) / push (app/src/include/cmake/third_party 改动) / PR
-- 手动触发可选择 ABI 过滤 (单 ABI 或 4 ABI)
-- 多 ABI: arm64-v8a / armeabi-v7a / x86_64 / x86
-- 步骤:
-  1. checkout (submodules: recursive)
-  2. setup-java@v4 (JDK 17 Temurin)
-  3. setup-android@v3 (SDK 34, NDK r27d, CMake 3.22.1)
-  4. setup-gradle@v4 (Gradle 8.10 + 缓存)
-  5. 环境展示 (调试用)
-  6. gradle :app:assembleRelease (含 ABI 过滤)
-  7. APK 校验 (file + unzip -l)
-  8. upload-artifact@v4 (30 天保留)
+修复 5 个本地构建错误:
+1. AndroidManifest.xml 顶部 C 注释改为 XML 注释
+   ("前言中不允许有内容" 错误)
+2. 移除 @mipmap/ic_launcher 引用 (无资源文件)
+3. cmake.path 用 ../CMakeLists.txt (相对路径, 可移植)
+   原 ../../CMakeLists.txt 多了一级 ../ 导致路径错
+4. 显式 version = "3.22.1", 避免新 SDK cmake 4.1.2 (XML v4)
+   与 AGP 8.5.0 (XML v3) 不兼容
+5. settings.gradle.kts: PREFER_SETTINGS (替代 FAIL_ON_PROJECT_REPOS)
+   解决 "no repositories are defined" 错误
 
-修改 app/build.gradle.kts:
-- abiFilters 加 "x86" (32-bit Intel, 模拟器支持)
-- 注释说明 4 个 ABI 的目标场景
+验证 (Windows + NDK 30 + Gradle 9.5.1 + AGP 8.5.0):
+  app-release.apk  2.68 MB  (4 ABI × 5 .so = 20 个 native 库)
 
-工具链说明:
-- Gradle 走 NDK 自带 android.toolchain.cmake (不需要我的 custom toolchain)
-- 我的 cmake/Options.cmake 用 CMAKE_SYSTEM_NAME / CMAKE_SYSTEM_PROCESSOR
-  自动适配所有 4 个 ABI
-- SM8635 走 aarch64 + -mcpu=cortex-a75 优化
-- 老设备 (32 位) 走 arm + -mfpu=neon -mfloat-abi=softfp
-- x86/x86_64 跳过 NEON flag
+APK 内容 (4 ABI):
+  lib/arm64-v8a/     libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
+  lib/armeabi-v7a/  libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
+  lib/x86/           libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
+  lib/x86_64/        libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
+
+CI 兼容性: 相对路径 + settings PREFER_SETTINGS 让
+.github/workflows/build-apk.yml 也能正常工作.

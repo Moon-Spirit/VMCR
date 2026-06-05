@@ -17,7 +17,8 @@ plugins {
 android {
     namespace = "io.anomalyco.vmcr"
     compileSdk = 34
-    ndkVersion = "27.3.13750724"   // 与 NDK r27d 一致
+    // 使用系统已安装的 NDK (CI: 27.3.13750724 / 本地: 30.0.14904198)
+    // 不指定具体版本, AGP 自动选已安装的最新
 
     defaultConfig {
         applicationId = "io.anomalyco.vmcr"
@@ -48,6 +49,7 @@ android {
                     "-DVMCR_USE_GLM=ON",
                     "-DVMCR_USE_SPDLOG=ON"
                 )
+                version = "3.22.1"
                 cppFlags += listOf("-std=c++20", "-fvisibility=hidden", "-fexceptions")
                 cFlags += listOf("-fvisibility=hidden")
             }
@@ -70,7 +72,9 @@ android {
 
     externalNativeBuild {
         cmake {
-            path = file("../../CMakeLists.txt")
+            // build.gradle.kts 在 app/, CMakeLists.txt 在 VMCR 根目录
+            // 用 ../ 即可 (gradle 以 build.gradle.kts 所在目录为基准)
+            path = file("../CMakeLists.txt")
             version = "3.22.1"
         }
     }
