@@ -1,24 +1,12 @@
-build: 修复本地 APK 构建 (4 ABI, 2.68 MB)
+ci: APK workflow 自动生成 debug keystore
 
-修复 5 个本地构建错误:
-1. AndroidManifest.xml 顶部 C 注释改为 XML 注释
-   ("前言中不允许有内容" 错误)
-2. 移除 @mipmap/ic_launcher 引用 (无资源文件)
-3. cmake.path 用 ../CMakeLists.txt (相对路径, 可移植)
-   原 ../../CMakeLists.txt 多了一级 ../ 导致路径错
-4. 显式 version = "3.22.1", 避免新 SDK cmake 4.1.2 (XML v4)
-   与 AGP 8.5.0 (XML v3) 不兼容
-5. settings.gradle.kts: PREFER_SETTINGS (替代 FAIL_ON_PROJECT_REPOS)
-   解决 "no repositories are defined" 错误
+CI 失败: validateSigningRelease FAILED
+原因: CI 环境没有 ~/.android/debug.keystore
+本地有 (Android Studio 自动创建), CI 没有
 
-验证 (Windows + NDK 30 + Gradle 9.5.1 + AGP 8.5.0):
-  app-release.apk  2.68 MB  (4 ABI × 5 .so = 20 个 native 库)
+修复: 添加 Generate debug keystore 步骤
+- 用 keytool 自动生成 RSA 2048 调试 keystore
+- alias=androiddebugkey, storepass=android (Android 标准)
+- 10000 天有效期
 
-APK 内容 (4 ABI):
-  lib/arm64-v8a/     libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
-  lib/armeabi-v7a/  libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
-  lib/x86/           libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
-  lib/x86_64/        libEGL.so libGL.so libvmcr_vulkan.so libvmcr_gles.so libvmcr_jni.so
-
-CI 兼容性: 相对路径 + settings PREFER_SETTINGS 让
-.github/workflows/build-apk.yml 也能正常工作.
+keytool 是 JDK 自带, 不需要额外安装

@@ -90,6 +90,24 @@ jobs:
           gradle --version 2>&1 | head -10
 
       # ---- 6. 构建 APK (4 ABI 全部) ----------------------------------
+      - name: Generate debug keystore
+        # AGP 8.5 要求 release build 必须有 signing config
+        # 调试签名 keystore 不存在时, 用 keytool 自动生成
+        run: |
+          KEYSTORE="$HOME/.android/debug.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            mkdir -p "$(dirname "$KEYSTORE")"
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=VMCR Debug, O=Android, C=US" 2>&1 | tail -5
+          fi
+          ls -la "$KEYSTORE"
+
       - name: Build APK
         working-directory: app
         run: |
