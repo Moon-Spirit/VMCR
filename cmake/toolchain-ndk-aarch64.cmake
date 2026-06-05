@@ -16,8 +16,30 @@ set(ANDROID_PLATFORM       "android-26")
 set(ANDROID_STL            "c++_static")
 set(ANDROID_ARM_MODE       "arm64-v8a")
 
+# NDK prebuilt 目录: linux-x86_64 / darwin-x86_64 / darwin-arm64 / windows-x86_64
+# CMAKE_HOST_SYSTEM_NAME 在 CMake 中是 "Linux" / "Darwin" / "Windows" (首字母大写)
+# NDK 目录约定是全小写
+string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" _HOST_LOWER)
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    set(_NDK_HOST_DIR "windows-x86_64")
+elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        set(_NDK_HOST_DIR "darwin-arm64")
+    else()
+        set(_NDK_HOST_DIR "darwin-x86_64")
+    endif()
+elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+        set(_NDK_HOST_DIR "linux-aarch64")
+    else()
+        set(_NDK_HOST_DIR "linux-x86_64")
+    endif()
+else()
+    set(_NDK_HOST_DIR "${_HOST_LOWER}-x86_64")
+endif()
+
 set(_TOOLCHAIN_ROOT
-    "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/${CMAKE_HOST_SYSTEM_NAME}")
+    "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/${_NDK_HOST_DIR}")
 
 if(NOT EXISTS "${_TOOLCHAIN_ROOT}/bin/clang++")
     message(FATAL_ERROR
