@@ -1,0 +1,39 @@
+#version 450 core
+#extension GL_ARB_separate_shader_objects : enable
+
+// ===========================================================================
+// tonemap.comp - HDR → SDR 后处理 (Phase 4 实现)
+// ===========================================================================
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0, rgba16f) readonly  uniform image2D hdr_input;
+layout(set = 0, binding = 1, rgba8)    writeonly uniform image2D ldr_output;
+
+layout(set = 0, binding = 2) uniform GlobalsUBO {
+    float exposure;
+    float gamma;
+    uint  width;
+    uint  height;
+} globals;
+
+vec3 aces(vec3 x) {
+    // Narkowicz 简化版 ACES
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    if (coord.x >= int(globals.width) || coord.y >= int(globals.height)) return;
+
+    vec3 hdr = imageLoad(hdr_input, coord).rgb * globals.exposure;
+    vec3 ldr = aces(hdr);
+    ldr = pow(ldr, vec3(1.0 / globals.gamma));
+
+    imageStore(ldr_output, coord, vec4(ldr, 1.0));
+}

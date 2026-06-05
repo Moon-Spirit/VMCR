@@ -18,13 +18,15 @@
 
 | 关键事实 | 说明 |
 | :--- | :--- |
-| **对外形态** | `libGL.so`，被 FCL 当作 OpenGL ES 驱动加载 |
+| **对外形态** | `libGL.so` + `libEGL.so`，被 FCL 当作 OpenGL ES 驱动加载 |
 | **首选路径** | Vulkan 1.3，针对 **SM8635（Adreno 735）** tile-based 优化 |
 | **保底路径** | GLES 3.2，原厂驱动透传 |
 | **拦截方式** | Fabric Mod Mixin → JNI → Native command stream |
 | **降级触发** | 设备探测失败 / `VK_ERROR_DEVICE_LOST` / Swapchain 重建失败 |
 | **C++ 标准** | C++20，**严格 RAII** |
 | **日志 TAG** | `VMCR-Core` / `VMCR-VK` / `VMCR-GL` / `VMCR-JNI` |
+| **主机侧构建** | ✅ Windows + VS2022 已验证，`vmcr_probe_tool` 跑通 |
+| **当前版本** | v0.1.0（Phase 0/1 完成：探测 + GLES 转发 + libGL/libEGL 劫持） |
 
 ---
 
@@ -237,13 +239,15 @@ VMCR/
 
 ## 5. 快速开始
 
+### 5.1 NDK 交叉编译（设备端）
+
 ```bash
 # 1) 准备环境
 export ANDROID_NDK_HOME=$HOME/sdk/android-ndk-r27
 export ANDROID_SDK_ROOT=$HOME/sdk/android-sdk
 
 # 2) 克隆
-git clone --recurse-submodules https://github.com/anomalyco/VMCR.git
+git clone --recurse-submodules https://github.com/Moon-Spirit/VMCR.git
 cd VMCR
 
 # 3) 一键构建
@@ -256,7 +260,35 @@ cd VMCR
 adb logcat -s VMCR-Core:V VMCR-VK:V VMCR-GL:V VMCR-JNI:V
 ```
 
-期望日志（SM8635）：
+### 5.2 主机侧构建（开发期 / CI）
+
+```powershell
+# Windows + VS 2022
+scripts\build_host.bat
+# 产物: build\host\tools\vmcr_probe_tool\vmcr_probe_tool.exe
+```
+
+```bash
+# Linux / macOS
+cmake -G Ninja -S . -B build/host \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DVMCR_ENABLE_LOADER=OFF -DVMCR_ENABLE_JNI=OFF -DVMCR_ENABLE_UNIT_TEST=ON
+cmake --build build/host --parallel
+ctest --test-dir build/host --output-on-failure
+```
+
+### 5.3 独立探测工具
+
+```bash
+# 自动模式
+./build/host/tools/vmcr_probe_tool/vmcr_probe_tool
+# 详细模式
+./build/host/tools/vmcr_probe_tool/vmcr_probe_tool --verbose
+# JSON 模式 (供 CI 解析)
+./build/host/tools/vmcr_probe_tool/vmcr_probe_tool --json
+```
+
+### 5.4 期望日志（SM8635 设备）
 
 ```
 VMCR-Core  I  [BOOT] Renderer=VulkanFull Feature=VK_1_3 TS=1 DR=1
