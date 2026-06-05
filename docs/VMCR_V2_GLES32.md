@@ -1,8 +1,13 @@
-# VMCR v2 — GLES 3.2 自实现工程文档 (修订版)
+# VMCR v2 — GLES 3.2 自实现工程文档 (修订 v0.3)
 
-> 版本: 0.2 (2026-06-06 修订)
+> 版本: 0.3 (2026-06-06 二次修订)
 > 状态: 设计阶段
 > 前置: v1 shim 路线已死 (FCL 完全不加载我们的 .so) — 详见 `V1_FAILURE_SUMMARY.md`
+>
+> 修订 v0.3 新增:
+> - **必须支持优化模组** (OptiFine / Sodium / Iris / 等) — 即 GLES 3.0+ 必须做
+> - **老手机 GPU 支持** — Vulkan 1.0 baseline, 特性探测降级
+> - **Phase 2 优先级提升** — 从 1.16~1.20 兼容改为 1.16+ 优化模组兼容
 
 ---
 
@@ -38,15 +43,72 @@
 - 混合 / 深度 / 模板
 - Vulkan 后端 (复用 `vmcr_vulkan.cpp`)
 
-**Phase 2 范围 (后续)**:
-- GLES 3.0 (UBO, VAO, transform feedback)
-- GLSL ES 3.00 编译
-- 适配 1.16 ~ 1.19
+**Phase 2 范围 (优先级提升)**:
+- **GLES 3.0 完整** (UBO, VAO, transform feedback, sampler object 独立, instanced rendering)
+- **GLSL ES 3.00 编译** (in/out blocks, layout qualifiers, uniform blocks)
+- **适配 OptiFine / Sodium / Iris / Rubidium / Lithium / Starlight 等优化模组**
+- 这些模组多用 1.16.5+ 但部分 (如 OptiFine) 支持 1.7.10
+- **重点特性**: 完整 UBO + VAO + instanced rendering + framebuffer multisampling
 
 **Phase 3 范围 (远期)**:
-- GLES 3.1/3.2
-- 适配 1.20+ 光影
+- GLES 3.1/3.2 (compute shader, indirect draw)
+- 适配 1.20+ 光影 (BSL, SEUS, Complementary)
 - glslang SPIR-V 优化
+- 跨设备性能调优
+
+### 跨设备兼容 (强制要求)
+
+**Vulkan baseline**: 1.0 (所有 Android 7.0+ 设备)
+**Vulkan 目标**: 1.1 完整, 1.2 优化
+**Vulkan 可选**: 1.3 (dynamic rendering, sync2 — Adreno 735+ 支持)
+
+**特性探测表** (在 `vk_loader.cpp` 里, 不假设高版本):
+```
+if (vk_api_version >= VK_MAKE_VERSION(1,3,0)) {
+    use_dynamic_rendering = true;   // 替代 VkRenderPass
+    use_sync2 = true;               // 新同步 API
+}
+if (vk_api_version >= VK_MAKE_VERSION(1,2,0)) {
+    use_descriptor_indexing = true; // 大描述符集
+    use_push_descriptors = true;    // 减少描述符集切换
+}
+if (vk_api_version >= VK_MAKE_VERSION(1,1,0)) {
+    use_sampler_ycbcr_conversion = true;
+    use_maintenance2 = true;
+}
+// 1.0 baseline: VkPhysicalDeviceFeatures 全部默认, VkRenderPass 标准
+```
+
+**GLES baseline**: 2.0 (任何 GLES 2.0 设备, 2010+)
+**GLES 目标**: 3.0 (2015+ 设备)
+**GLES 高级**: 3.2 (2018+ 设备, Adreno 5xx+, Mali G7x+)
+
+**老手机测试目标** (必须能跑):
+- Adreno 305/308/405/505 (Vulkan 1.0) — 入门级 4G 手机
+- Mali T720/T830 (Vulkan 1.0)
+- PowerVR GE8100 (Vulkan 1.0)
+
+**新手机优化目标**:
+- Adreno 640+ (Vulkan 1.1) — 2018+ 中端
+- Adreno 730+ (Vulkan 1.2) — 2022+ 旗舰
+- Mali G77+ (Vulkan 1.1)
+- Mali G710+ (Vulkan 1.2)
+
+**优化模组清单** (Phase 2 必须支持):
+- **OptiFine** (1.7.10+, 1.16+): 大量 UBO + 动态加载 shader
+- **Sodium** (1.16+): VAO + transform feedback
+- **Iris** (1.16+, Sodium 替代品): 同 Sodium
+- **Rubidium** (1.16+): Sodium + 兼容 mod
+- **Lithium** (1.16+): 轻量, UBO
+- **Starlight** (1.16+): 灯光优化, UBO
+- **Canary** (1.20+): Sodium fork, 全面 UBO + compute (Phase 3)
+- **Embeddium** (1.16+, MC 1.18 移植): Sodium 移植
+
+**着色器兼容性** (Phase 2):
+- GLSL ES 3.00 完整支持 (所有上述模组都用)
+- 精确的 precision modifier 处理 (mediump / highp)
+- layout 限定符完整 (location, binding, set)
+- 数组 uniform 完整支持
 
 ---
 
@@ -294,18 +356,23 @@ glIsTexture, glIsBuffer, glIsProgram, glIsShader, glGetTexParameter*, glGetBuffe
 
 **Phase 1 验收**: MC 1.7.10 原版能进主菜单, 能加载世界, 能看见方块.
 
-### Phase 2: 跑 MC 1.16~1.20 (4-6 周)
+### Phase 2: 跑 MC 1.16+ + 优化模组 (4-6 周)
 
-- GLES 3.0 (UBO, VAO 完整语义, transform feedback)
-- GLSL ES 3.00
+- **GLES 3.0 完整** (UBO, VAO 完整语义, transform feedback, instanced rendering)
+- **GLSL ES 3.00** 完整 (含 in/out blocks, layout qualifiers)
+- **OptiFine** (1.7.10+ 和 1.16+ 两套路径)
+- **Sodium/Iris/Rubidium/Embeddium** (1.16+ 优化模组)
+- **Lithium/Starlight** (轻量优化)
 - sRGB 流程
-- 性能优化 (pipeline cache, render pass merge)
+- 性能优化 (pipeline cache, render pass merge, descriptor pool)
+- 老手机特性降级 (Vulkan 1.0 fallback 路径)
 
 ### Phase 3: 光影 (后续, 看情况)
 
-- GLSL ES 3.20
-- 资源绑定优化
+- GLES 3.1/3.2 (compute shader, indirect draw)
+- 1.20+ 光影 (BSL, SEUS, Complementary)
 - 大纹理流式
+- Vulkan 1.2/1.3 特性 (descriptor indexing, push descriptors)
 
 ---
 
