@@ -29,6 +29,7 @@ on:
       - "third_party/**"
       - "CMakeLists.txt"
       - ".gitmodules"
+      - ".github/workflows/build-apk.yml"   # workflow 改动也触发
   pull_request:
     branches: [main]
 
