@@ -1,0 +1,32 @@
+// For format details, see https://fabricmc.net/wiki/documentation:fabric_mod_json
+{
+  "schemaVersion": 1,
+  "id": "vmcr",
+  "version": "${version}",
+  "name": "VMCR",
+  "description": "Vulkan Mixed Compatibility Renderer - native bridge",
+  "authors": ["anomalyco"],
+  "contact": {
+    "homepage": "https://github.com/Moon-Spirit/VMCR",
+    "sources":  "https://github.com/Moon-Spirit/VMCR"
+  },
+  "license": "Apache-2.0",
+  "icon": "assets/vmcr/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["io.anomalyco.vmcr.VMCRMixin"]
+  },
+  "mixins": ["vmcr.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.4",
+    "java": ">=17",
+    "fabric-api": "*"
+  },
+  "custom": {
+    "vmcr": {
+      "native_lib": "libvmcr_jni.so",
+      "router_lib":  "libGL.so"
+    }
+  }
+}
