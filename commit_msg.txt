@@ -1,21 +1,10 @@
-vulkan: 添加 Vulkan-Hpp + VMA + vkbootstrap 增强版 vk_renderer
+docs: README 更新 v0.2.0 反映 FCL APK 插件架构
 
-新文件:
-- include/vmcr/vk_hpp.h: 头文件检测, 子模块缺失时自动降级到原生 Vulkan
-- src/main/cpp/vulkan/vk_renderer_hpp.cpp: Vulkan-Hpp RAII + VMA + vkbootstrap
-  的 VulkanRenderer 实现. 使用:
-  - vkb::InstanceBuilder / vkb::DeviceBuilder (vkbootstrap 简化实例/设备创建)
-  - vk::raii::Instance / Device / SurfaceKHR (Vulkan-Hpp RAII)
-  - VmaAllocator (VMA, GPU 显存自动管理, 减少手动 vkAllocateMemory)
-  - #if VMCR_HAS_VULKAN_HPP / VMCR_HAS_VMA / VMCR_HAS_VKBOOTSTRAP 守卫
+- 痛点对比表扩展 (10+ 维度对比)
+- 加 GTNH 1.7.10 兼容性说明
+- 渲染器标识: VMCR:libGL.so:libEGL.so
+- 环境变量: POJAVEXEC_EGL=libEGL.so
+- 依赖生态: Vulkan-Hpp/VMA/vkbootstrap/glslang/SPIRV-Cross/GLM/spdlog
+- 构建系统: NDK r27d 官方 android.toolchain.cmake
 
-CMakeLists.txt 升级:
-- 检测 third_party/Vulkan-Hpp 是否存在
-  - 存在: 编译 vk_renderer_hpp.cpp (新)
-  - 不存在: 编译 vk_renderer.cpp (legacy, 已验证)
-- 添加 Vulkan-Hpp / VMA / vkbootstrap include 路径 (子模块存在时)
-- 维持向后兼容: 旧 CI (无子模块) 仍能编译
-
-后续 (子模块拉取后):
-- git submodule update --init --recursive
-- 自动切换到 Hpp 版本, 获得 RAII + VMA 自动分配
+参考 MobileGL-Dev/MobileGlues-plugin 的 APK 插件集成方式.

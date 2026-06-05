@@ -18,15 +18,17 @@
 
 | 关键事实 | 说明 |
 | :--- | :--- |
-| **对外形态** | `libGL.so` + `libEGL.so`，被 FCL 当作 OpenGL ES 驱动加载 |
-| **首选路径** | Vulkan 1.3，针对 **SM8635（Adreno 735）** tile-based 优化 |
+| **对外形态** | APK 形式的 FCL 插件，含 `libGL.so` + `libEGL.so` + `libvmcr_vk.so` + `libvmcr_gles.so` + `libvmcr_jni.so` |
+| **首选路径** | Vulkan 1.3（Vulkan-Hpp RAII + VMA + vkbootstrap），针对 **SM8635（Adreno 735）** tile-based 优化 |
 | **保底路径** | GLES 3.2，原厂驱动透传 |
-| **拦截方式** | Fabric Mod Mixin → JNI → Native command stream |
-| **降级触发** | 设备探测失败 / `VK_ERROR_DEVICE_LOST` / Swapchain 重建失败 |
-| **C++ 标准** | C++20，**严格 RAII** |
-| **日志 TAG** | `VMCR-Core` / `VMCR-VK` / `VMCR-GL` / `VMCR-JNI` |
-| **主机侧构建** | ✅ Windows + VS2022 已验证，`vmcr_probe_tool` 跑通 |
-| **当前版本** | v0.1.0（Phase 0/1 完成：探测 + GLES 转发 + libGL/libEGL 劫持） |
+| **MC 版本** | **1.7.10 起**（覆盖 GT: New Horizons 主流老版本） |
+| **C++ 标准** | C++20 + C++_static（NDK 友好） |
+| **渲染器标识** | `VMCR:libGL.so:libEGL.so`（FCL 通过 `AndroidManifest meta-data` 识别） |
+| **环境变量** | `POJAVEXEC_EGL=libEGL.so` + `LIBGL_ES=3`（FCL/Pojav 启动器） |
+| **依赖生态** | Vulkan-Hpp / VMA / vkbootstrap / glslang / SPIRV-Cross / GLM / spdlog / Dobby |
+| **构建系统** | CMake 3.22.1 + Ninja + NDK r27d（`android.toolchain.cmake`） |
+| **主机侧构建** | ✅ Windows + VS2022 / Linux + gcc 11 已验证 |
+| **当前版本** | v0.2.0（Phase 0/1 完成 + MobileGlues 风格架构 + GTNH 兼容） |
 
 ---
 
@@ -39,12 +41,18 @@
 | 渲染路径 | GLES → GLES 兼容层 | GLES → Vulkan (Mesa) | **Vulkan 1.3 直通 + GLES 透传保底** |
 | 状态机开销 | 中（重实现状态机） | 高（OpenGL 状态机在 Vulkan 之上模拟） | **零（Vulkan 路径绕过状态机）** |
 | 启动耗时 | 较低 | 高（Mesa 初始化） | **低（直接 Vulkan Instance）** |
-| 设备兼容性 | 旧设备友好 | 仅 Mesa 支持的设备 | **Vulkan 1.0+ 全部支持** |
+| 设备兼容性 | 旧设备友好 | 仅 Mesa 支持的设备 | **Vulkan 1.0+ 全部支持；MC 1.7.10+** |
 | 厂商优化 | 几乎无 | 通用 | **Adreno 735 专属 tile / AHB / NEON 优化** |
 | 拦截粒度 | 整个 GLES 替换 | 整个 GLES 替换 | **按调用子集 hook，未命中走原厂** |
 | Chunk Mesh 直通 | 不支持 | 不支持 | **JNI 直传 SSBO，零拷贝** |
 | 热降级 | 不支持 | 不支持 | **运行时 Vulkan → GLES 切换** |
-| FCL 集成 | 需手动注入 | 需 Mesa 适配 | **原生 `custom_renderer.json`** |
+| FCL 集成 | APK 插件 (AndroidManifest meta-data) | 需 Mesa 适配 | **APK 插件 (renderer/boatEnv/pojavEnv meta-data)** |
+| Shader 工具链 | glslang + SPIRV-Cross (内置) | N/A | **glslang + SPIRV-Cross (内置, 兼容 Iris)** |
+| 内存管理 | 手写 | Zink | **VMA 自动池** |
+| 实例/设备创建 | 手写 | Zink | **vkbootstrap 一行代码** |
+| C++ Vulkan 绑定 | 原始 C | 原始 C | **Vulkan-Hpp RAII** |
+| 数学库 | GLM | GLM | **GLM** |
+| 日志 | 自实现 | 自实现 | **spdlog → logcat** |
 
 ### 1.2 VMCR 的核心优势
 
