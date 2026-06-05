@@ -41,6 +41,7 @@ endif()
 
 if(VMCR_ENABLE_VULKAN)
     add_subdirectory(src/main/cpp/vulkan)
+    add_subdirectory(tools/vmcr_probe_tool)
 endif()
 
 if(VMCR_ENABLE_GLES)
