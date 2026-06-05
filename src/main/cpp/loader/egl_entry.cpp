@@ -11,6 +11,7 @@
 #include "vmcr/export.h"
 
 #include <cstring>
+#include <dlfcn.h>
 
 extern "C" {
 
@@ -101,9 +102,27 @@ VMCR_EXPORT EGLBoolean EGLAPIENTRY eglSwapInterval(EGLDisplay dpy, EGLint interv
 
 VMCR_EXPORT __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char* name) {
+    if (!name) return nullptr;
     auto& e = vmcr::vendor::egl();
     // vendor 返回 void*, EGL 规范要求函数指针. reinterpret_cast 转换
     void* p = e.eglGetProcAddress ? e.eglGetProcAddress(name) : nullptr;
+    if (p) return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(p);
+
+    // 兜底: vendor 返回 null 时, 尝试用 dlsym 解析
+    // - 解决部分 Adreno 驱动 eglGetProcAddress 不导出某些 ES3.x 函数的问题
+    // - LWJGL3 在 Android 上优先用 eglGetProcAddress, 但部分 dlsym 才能找到
+    //   的扩展函数 (e.g. GL_EXT_buffer_storage) 会拿不到
+    if (auto* handle = ::dlopen("libGLESv2.so", RTLD_NOW | RTLD_NOLOAD)) {
+        p = ::dlsym(handle, name);
+        ::dlclose(handle);
+    }
+    if (!p) {
+        // 第二次兜底: 试 libEGL.so (部分平台 EGL 内部函数)
+        if (auto* handle = ::dlopen("libEGL.so", RTLD_NOW | RTLD_NOLOAD)) {
+            p = ::dlsym(handle, name);
+            ::dlclose(handle);
+        }
+    }
     return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(p);
 }
 

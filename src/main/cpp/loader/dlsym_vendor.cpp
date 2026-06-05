@@ -114,6 +114,7 @@ bool load_vendor() noexcept {
     t.glGetShaderPrecisionFormat       = sym<decltype(t.glGetShaderPrecisionFormat)>(g_lib_gles, "glGetShaderPrecisionFormat");
     t.glGetShaderSource                = sym<decltype(t.glGetShaderSource)>(g_lib_gles, "glGetShaderSource");
     t.glGetString                      = sym<decltype(t.glGetString)>(g_lib_gles, "glGetString");
+    t.glGetStringi                     = sym<decltype(t.glGetStringi)>(g_lib_gles, "glGetStringi");
     t.glGetTexParameterfv              = sym<decltype(t.glGetTexParameterfv)>(g_lib_gles, "glGetTexParameterfv");
     t.glGetTexParameteriv              = sym<decltype(t.glGetTexParameteriv)>(g_lib_gles, "glGetTexParameteriv");
     t.glGetUniformfv                   = sym<decltype(t.glGetUniformfv)>(g_lib_gles, "glGetUniformfv");

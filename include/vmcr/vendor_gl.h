@@ -104,6 +104,7 @@ struct GlFunctionTable {
     void (*glGetShaderPrecisionFormat)(GLenum, GLenum, GLint*, GLint*) = nullptr;
     void (*glGetShaderSource)(GLuint, GLsizei, GLsizei*, GLchar*) = nullptr;
     const GLubyte* (*glGetString)(GLenum) = nullptr;               // returns const GLubyte*
+    const GLubyte* (*glGetStringi)(GLenum, GLuint) = nullptr;       // GL 3.0+ returns const GLubyte*
     void (*glGetTexParameterfv)(GLenum, GLenum, GLfloat*) = nullptr;
     void (*glGetTexParameteriv)(GLenum, GLenum, GLint*) = nullptr;
     void (*glGetUniformfv)(GLuint, GLint, GLfloat*) = nullptr;

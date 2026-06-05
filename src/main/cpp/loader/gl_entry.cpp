@@ -12,14 +12,18 @@
 #include "vmcr/log.h"
 #include "vmcr/vendor_gl.h"
 #include "vmcr/export.h"
+#include "vmcr/gl_safe.h"
 
 #include <cstring>
+#include <string>
+#include <vector>
+#include <mutex>
 
 // =====================================================================
 // 辅助函数: 打印转发日志 (TRACE 级别, 默认不开启)
 // =====================================================================
 static inline void vmcr_forward_log(const char* name) {
-    LOG_V(log::kTagGL, "forward: %s", name);
+    LOG_V(vmcr::log::kTagGL, "forward: %s", name);
 }
 
 namespace vmcr::loader {
@@ -134,7 +138,104 @@ extern "C" VMCR_EXPORT GLuint glCreateShader(GLenum type) {
 
 extern "C" VMCR_EXPORT const GLubyte* glGetString(GLenum name) {
     auto& t = vmcr::vendor::gl();
-    return t.glGetString ? t.glGetString(name) : nullptr;
+    const GLubyte* r = t.glGetString ? t.glGetString(name) : nullptr;
+    if (r) return r;
+
+    // 兜底: vendor 返回 nullptr 时, 用预定义字符串防止 MC NPE
+    if (auto* s = vmcr::gl_safe::safe_string_for(name)) {
+        return reinterpret_cast<const GLubyte*>(s);
+    }
+    return nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// glGetStringi - GL 3.0+ 扩展枚举 (LWJGL3 在 ES3.x 上用此 API)
+// 返回 EXTENSIONS 列表中第 index 个扩展字符串
+// ---------------------------------------------------------------------------
+namespace {
+
+// 缓存 vendor 报告的扩展列表 (按空格分隔)
+std::vector<std::string> g_extensions;
+std::string g_extensions_concat;
+std::once_flag g_ext_init_flag;
+std::mutex g_ext_mutex;
+
+void ensure_extensions_loaded() {
+    std::call_once(g_ext_init_flag, []() {
+        auto& t = vmcr::vendor::gl();
+        if (!t.glGetString) return;
+        const GLubyte* s = t.glGetString(vmcr::gl_safe::pname::EXTENSIONS);
+        if (!s) return;
+        const char* p = reinterpret_cast<const char*>(s);
+        g_extensions_concat = p;
+        // 按空格分割
+        std::string cur;
+        for (const char* q = p; *q; ++q) {
+            if (*q == ' ') {
+                if (!cur.empty()) {
+                    g_extensions.push_back(cur);
+                    cur.clear();
+                }
+            } else {
+                cur.push_back(*q);
+            }
+        }
+        if (!cur.empty()) g_extensions.push_back(cur);
+    });
+}
+
+}  // namespace
+
+extern "C" VMCR_EXPORT const GLubyte* glGetStringi(GLenum name, GLuint index) {
+    auto& t = vmcr::vendor::gl();
+    // 优先用 vendor 的 glGetStringi (部分 Adreno 驱动支持)
+    if (t.glGetStringi) {
+        return t.glGetStringi(name, index);
+    }
+    // 降级: 用 glGetString(GL_EXTENSIONS) 的缓存列表
+    if (name == vmcr::gl_safe::pname::EXTENSIONS) {
+        ensure_extensions_loaded();
+        std::lock_guard<std::mutex> lock(g_ext_mutex);
+        if (index < g_extensions.size()) {
+            return reinterpret_cast<const GLubyte*>(g_extensions[index].c_str());
+        }
+    }
+    // 最后兜底: 用 safe_string_for 提供的固定字符串
+    if (auto* s = vmcr::gl_safe::safe_string_for(name)) {
+        return reinterpret_cast<const GLubyte*>(s);
+    }
+    return nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// glGetIntegerv - 带兜底的安全实现
+// vendor 返回 0 (或 < safe_min) 时, 用安全值兜底, 防止 MC 把 0
+// 当成有效上限而崩在 TextureAtlas 上
+// ---------------------------------------------------------------------------
+extern "C" VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
+    if (!params) return;
+    auto& t = vmcr::vendor::gl();
+    if (t.glGetIntegerv) {
+        t.glGetIntegerv(pname, params);
+    } else {
+        *params = 0;
+    }
+
+    if (vmcr::gl_safe::needs_safe_fallback(pname)) {
+        GLint safe_min = vmcr::gl_safe::safe_min_for_pname(pname);
+        // GL_MAX_TEXTURE_SIZE 特殊: 永远保证 ≥ 4096, 防止 MC 1.7.10 atlas 崩溃
+        // (实测 Adreno 735 ≥ 16384, 兜底 4096 足以装 MC 32x 材质)
+        if (pname == vmcr::gl_safe::pname::MAX_TEXTURE_SIZE) {
+            safe_min = vmcr::gl_safe::kAdrenoMaxTextureSize > safe_min
+                       ? vmcr::gl_safe::kAdrenoMaxTextureSize
+                       : safe_min;
+        }
+        if (*params < safe_min) {
+            LOG_W(vmcr::log::kTagGL, "glGetIntegerv(0x%04x) vendor=%d, fallback to %d",
+                  (unsigned)pname, (int)*params, (int)safe_min);
+            *params = safe_min;
+        }
+    }
 }
 
 extern "C" VMCR_EXPORT GLboolean glIsBuffer(GLuint buffer) {
@@ -249,7 +350,6 @@ FWD7 (glGetActiveUniform, GLuint, program, GLuint, index, GLsizei, bufSize, GLsi
 FWD4 (glGetAttachedShaders, GLuint, program, GLsizei, maxCount, GLsizei*, count, GLuint*, shaders)
 FWD2 (glGetFloatv, GLenum, pname, GLfloat*, params)
 FWD4 (glGetFramebufferAttachmentParameteriv, GLenum, target, GLenum, attachment, GLenum, pname, GLint*, params)
-FWD2 (glGetIntegerv, GLenum, pname, GLint*, params)
 FWD4 (glGetProgramInfoLog, GLuint, program, GLsizei, bufSize, GLsizei*, length, GLchar*, infoLog)
 FWD3 (glGetProgramiv, GLuint, program, GLenum, pname, GLint*, params)
 FWD3 (glGetRenderbufferParameteriv, GLenum, target, GLenum, pname, GLint*, params)
