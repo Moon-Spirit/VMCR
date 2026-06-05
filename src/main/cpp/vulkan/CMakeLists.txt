@@ -3,8 +3,6 @@
 // ===========================================================================
 add_library(vmcr_vulkan SHARED
     vmcr_probe.cpp
-    vk_device.cpp
-    vk_swapchain.cpp
     vk_renderer.cpp)
 
 target_compile_features(vmcr_vulkan PUBLIC cxx_std_20)
