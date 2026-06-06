@@ -14,8 +14,9 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <ucontext.h>
 #include <errno.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
