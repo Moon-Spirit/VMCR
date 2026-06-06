@@ -10,6 +10,7 @@
 set(_vmcr_gles_src
     gl_state.cpp
     gles_entry.cpp
+    crash_handler.cpp
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
