@@ -1,30 +1,40 @@
 # ===========================================================================
-# VMCR 全局编译开关
+# VMCR 全局编译开关 (v2 路线)
+#
+# v2 重大变化:
+# - 删除 VMCR_ENABLE_LOADER (不再有"转发器"层)
+# - 新增 VMCR_ENABLE_EGL (EGL 1.5 实现)
+# - 保留 VMCR_ENABLE_GLES (GLES 2.0/3.0/3.2 实现)
+# - VMCR_ENABLE_VULKAN: 默认 ON, 1.0 baseline 必备
+# - 移除 VMCR_ENABLE_DESC_BUFFER (默认基于设备 Vulkan 版本探测)
 # ===========================================================================
 
 # ---- 功能开关 ------------------------------------------------------------
-option(VMCR_ENABLE_VULKAN          "Build Vulkan backend"                 ON)
-option(VMCR_ENABLE_GLES            "Build GLES 3.2 fallback backend"      ON)
-option(VMCR_ENABLE_JNI             "Build JNI bridge"                     ON)
-option(VMCR_ENABLE_LOADER          "Build libGL.so / libEGL.so loader"    ON)
-option(VMCR_ENABLE_UNIT_TEST       "Build host unit tests"                OFF)
-option(VMCR_ENABLE_VERBOSE         "Verbose logging"                      OFF)
-option(VMCR_ENABLE_ASAN            "AddressSanitizer"                     OFF)
-option(VMCR_ENABLE_TSAN            "ThreadSanitizer"                      OFF)
-option(VMCR_ENABLE_NEON            "ARM NEON intrinsics"                  ON)
-option(VMCR_ENABLE_FP16            "FP16 shader paths"                    ON)
-option(VMCR_ENABLE_SHADER_HOT_RELOAD "Hot reload SPIR-V"                  OFF)
-option(VMCR_ENABLE_DESC_BUFFER     "Use VK_EXT_descriptor_buffer"         ON)
-option(VMCR_ENABLE_DRAW_INDIRECT   "Use VK_KHR_draw_indirect_count"        ON)
-option(VMCR_USE_VMA                "Use VulkanMemoryAllocator"            ON)
-option(VMCR_ENABLE_PIPELINE_CACHE  "Use persistent pipeline cache"        ON)
+option(VMCR_ENABLE_EGL             "Build EGL 1.5 implementation"       ON)
+option(VMCR_ENABLE_GLES            "Build GLES 2.0/3.0/3.2 implementation" ON)
+option(VMCR_ENABLE_VULKAN          "Build Vulkan backend (1.0 baseline)" ON)
+option(VMCR_ENABLE_JNI             "Build JNI bridge"                    OFF)
+option(VMCR_ENABLE_UNIT_TEST       "Build host unit tests"               OFF)
+option(VMCR_ENABLE_VERBOSE         "Verbose logging"                     OFF)
+option(VMCR_ENABLE_ASAN            "AddressSanitizer"                    OFF)
+option(VMCR_ENABLE_TSAN            "ThreadSanitizer"                     OFF)
+option(VMCR_ENABLE_NEON            "ARM NEON intrinsics"                 ON)
+option(VMCR_ENABLE_FP16            "FP16 shader paths"                   ON)
+option(VMCR_ENABLE_SHADER_HOT_RELOAD "Hot reload SPIR-V"                 OFF)
+option(VMCR_USE_VMA                "Use VulkanMemoryAllocator"           ON)
+option(VMCR_ENABLE_PIPELINE_CACHE  "Use persistent pipeline cache"       ON)
 
 # 主机侧构建时关闭 Android-only 依赖
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(VMCR_ENABLE_LOADER OFF CACHE BOOL "Build loader" FORCE)
+    set(VMCR_ENABLE_EGL    OFF CACHE BOOL "Build EGL"    FORCE)
     set(VMCR_ENABLE_JNI    OFF CACHE BOOL "Build JNI"    FORCE)
     set(VMCR_ENABLE_NEON   OFF CACHE BOOL "NEON"         FORCE)
 endif()
+
+# ---- Vulkan 最低版本 (Vulkan 1.0 baseline 强制) ---------------------------
+# 高级特性 (descriptor indexing 等) 通过设备能力探测自动启用/禁用
+set(VMCR_VK_MIN_VERSION "1.0.0" CACHE STRING "Minimum Vulkan version")
+set(VMCR_VK_TARGET_VERSION "1.2.0" CACHE STRING "Target Vulkan version")
 
 # ---- 渲染档位 ------------------------------------------------------------
 set(VMCR_RENDER_TIER "auto"

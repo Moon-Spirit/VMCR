@@ -40,14 +40,7 @@ android {
             cmake {
                 arguments += listOf(
                     "-DANDROID_STL=c++_static",
-                    "-DVMCR_RENDER_TIER=auto",
-                    "-DVMCR_USE_GLSLANG=ON",
-                    "-DVMCR_USE_SPIRV_CROSS=ON",
-                    "-DVMCR_USE_VULKAN_HPP=ON",
-                    "-DVMCR_USE_VMA=ON",
-                    "-DVMCR_USE_VKBOOTSTRAP=ON",
-                    "-DVMCR_USE_GLM=ON",
-                    "-DVMCR_USE_SPDLOG=ON"
+                    "-DVMCR_RENDER_TIER=auto"
                 )
                 version = "3.22.1"
                 cppFlags += listOf("-std=c++20", "-fvisibility=hidden", "-fexceptions")

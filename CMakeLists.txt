@@ -25,14 +25,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/Options.cmake)
 # ===========================================================================
 # 2. Vulkan 头文件 / Loader
 # ===========================================================================
-include(${CMAKE_SOURCE_DIR}/cmake/FindVulkan.cmake)
+# include(${CMAKE_SOURCE_DIR}/cmake/FindVulkan.cmake)  # Phase 0 暂不引
 
 # ===========================================================================
-# 3. 第三方依赖 (submodules)
+# 3. 第三方依赖 (Phase 0: 暂不引入, Phase 1+ 引入 glslang + VMA)
 # ===========================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/CMakeLists.txt")
-    add_subdirectory(third_party EXCLUDE_FROM_ALL)
-endif()
+# if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/CMakeLists.txt")
+#     add_subdirectory(third_party EXCLUDE_FROM_ALL)
+# endif()
 
 # ===========================================================================
 # 4. 公共 include
@@ -41,26 +41,28 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # ===========================================================================
 # 5. 子模块
+#   v2 路线: 自写 EGL + GLES (Phase 0 占位, Phase 1+ 真实 Vulkan 翻译)
+#   - egl/    EGL 1.5 实现
+#   - gles/   GLES 2.0+ 实现
+#   - platform/ Android logger
+#   - jni/    JNI bridge (可选, 默认 OFF)
+#   - vulkan/ Vulkan 后端 (Phase 1+ 引入)
 # ===========================================================================
-if(VMCR_ENABLE_VULKAN OR VMCR_ENABLE_GLES)
-    add_subdirectory(src/main/cpp/core)
-endif()
-
-if(VMCR_ENABLE_VULKAN)
-    add_subdirectory(src/main/cpp/vulkan)
-    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
-        add_subdirectory(tools/vmcr_probe_tool)
-    endif()
+if(VMCR_ENABLE_EGL)
+    add_subdirectory(src/main/cpp/egl)
 endif()
 
 if(VMCR_ENABLE_GLES)
     add_subdirectory(src/main/cpp/gles)
 endif()
 
-if(VMCR_ENABLE_LOADER)
-    add_subdirectory(src/main/cpp/loader)
-endif()
 add_subdirectory(src/main/cpp/platform)
+
+if(VMCR_ENABLE_VULKAN)
+    # Phase 1+ 引入
+    # add_subdirectory(src/main/cpp/vulkan)
+    message(STATUS "VMCR Phase 0: Vulkan backend not yet implemented, will add in Phase 1")
+endif()
 
 if(VMCR_ENABLE_JNI)
     add_subdirectory(src/main/cpp/jni)
@@ -77,11 +79,5 @@ endif()
 # ===========================================================================
 # 7. 安装规则
 # ===========================================================================
-if(VMCR_ENABLE_LOADER)
-    include(CMakePackageConfigHelpers)
-    install(TARGETS vmcr_loader
-        RUNTIME DESTINATION .
-        LIBRARY DESTINATION .)
-endif()
 install(DIRECTORY configs/ DESTINATION configs/)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/scripts/ DESTINATION scripts/)
