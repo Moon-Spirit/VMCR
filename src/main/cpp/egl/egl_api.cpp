@@ -8,6 +8,12 @@
 #include "vmcr/egl_types.h"
 #include "egl_internal.h"
 
+#include <cstring>
+#include <cstdio>
+#include <string>
+#include <dlfcn.h>
+#include <unistd.h>
+
 namespace vmcr::egl {
 namespace {
 constexpr const char* kTag = "VMCR-EGL";
@@ -262,7 +268,51 @@ eglGetProcAddress(const char* name) {
         err(egl_err::BAD_PARAMETER);
         return nullptr;
     }
-    (void)name;
+
+    // ---- 关键: 优先返回我们自己 libGL.so 的函数指针 ----
+    // LWJGL3 在 Android 上优先用 eglGetProcAddress 查 GL 函数 (不走 dlsym),
+    // 我们 libEGL.so 的 eglGetProcAddress 必须返回 shim 自己的函数, 否则 LWJGL3
+    // 会用 nullptr 当函数指针, 崩在 GL 调用.
+    static void* s_our_libGL = nullptr;
+    static bool s_init_done = false;
+    if (!s_init_done) {
+        s_init_done = true;
+        // 通过 dladdr 反查本函数 (eglGetProcAddress) 所在 .so 路径
+        Dl_info info{};
+        if (::dladdr(reinterpret_cast<const void*>(&eglGetProcAddress), &info)
+            && info.dli_fname) {
+            std::string path(info.dli_fname);
+            const std::string from = "/libEGL.so";
+            const std::string to   = "/libGL.so";
+            auto pos = path.rfind(from);
+            if (pos != std::string::npos) {
+                path.replace(pos, from.size(), to);
+                s_our_libGL = ::dlopen(path.c_str(), RTLD_NOW | RTLD_NOLOAD);
+                if (s_our_libGL) {
+                    std::fprintf(stderr,
+                        "[VMCR-EGL] eglGetProcAddress: locked libGL.so at %s\n",
+                        path.c_str());
+                } else {
+                    std::fprintf(stderr,
+                        "[VMCR-EGL] eglGetProcAddress: dlopen(%s) failed: %s\n",
+                        path.c_str(), ::dlerror());
+                }
+            }
+        }
+        if (!s_our_libGL) {
+            std::fprintf(stderr,
+                "[VMCR-EGL] eglGetProcAddress: could not find our libGL.so, GL stubs will be unreachable via eglGetProcAddress\n");
+        }
+    }
+    if (s_our_libGL) {
+        void* ours = ::dlsym(s_our_libGL, name);
+        if (ours) {
+            return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(ours);
+        }
+    }
+
+    // 不是 GL 函数 (e.g. egl* 内部), 走 vendor 路径
+    // Phase 0: 没 vendor, 返回 nullptr
     return nullptr;
 }
 
