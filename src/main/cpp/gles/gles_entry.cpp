@@ -9,7 +9,10 @@
 #include "vmcr/gles_types.h"
 #include "gl_state.h"
 
+#include <cstdio>
 #include <cstring>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 namespace vmcr::gles {
 namespace {
@@ -58,6 +61,7 @@ VMCR_EXPORT void glGetBooleanv(GLenum pname, GLboolean* params) {
 }
 VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
     if (!params) return;
+    int orig = *params;
     switch (pname) {
         case 0x0D33: *params = 16384; break;  // GL_MAX_TEXTURE_SIZE
         case 0x0D3A: { params[0] = 4096; params[1] = 4096; break; }
@@ -65,6 +69,24 @@ VMCR_EXPORT void glGetIntegerv(GLenum pname, GLint* params) {
         case 0x821B: *params = 3; break;   // GL_MAJOR_VERSION
         case 0x821C: *params = 2; break;   // GL_MINOR_VERSION
         default: *params = 0; break;
+    }
+    // ---- 诊断: 写 stderr + 文件 (FCL 日志可能不抓 stderr, 但 root 能看文件) ----
+    static int call_count = 0;
+    if (call_count < 32 || (pname == 0x0D33)) {
+        std::fprintf(stderr,
+            "[VMCR-GL] glGetIntegerv(0x%04x) -> %d (orig was %d) [#%d]\n",
+            (unsigned)pname, *params, orig, ++call_count);
+        // 也写文件 (root 能读)
+        const char* path = "/data/local/tmp/vmcr_getintegerv.log";
+        FILE* f = std::fopen(path, "a");
+        if (f) {
+            std::fprintf(f, "glGetIntegerv(0x%04x) -> %d (orig was %d) [#%d]\n",
+                         (unsigned)pname, *params, orig, call_count);
+            std::fclose(f);
+            ::chmod(path, 0666);
+        }
+    } else {
+        ++call_count;
     }
 }
 VMCR_EXPORT void glGetFloatv(GLenum pname, GLfloat* params) {
